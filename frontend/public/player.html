@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Control Jugador</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --rojo: #e63946;
+      --azul: #3a86ff;
+      --amarillo: #ffb703;
+      --verde: #2a9d8f;
+      --negro: #343a40;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    
+    /* Layout dinámico para cualquier tamaño de móvil */
+    body {
+      background: #111622;
+      color: #fff;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: max(0.8rem, env(safe-area-inset-top)) max(0.8rem, env(safe-area-inset-right)) max(0.8rem, env(safe-area-inset-bottom)) max(0.8rem, env(safe-area-inset-left));
+      overflow-x: hidden;
+    }
+    .hidden { display: none !important; }
+
+    #user-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      margin-bottom: 0.6rem;
+      font-weight: bold;
+      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+    }
+
+    .time-bar-wrapper {
+      width: 100%;
+      height: 8px;
+      background: #232d3f;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+    }
+    .time-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: #2a9d8f;
+      transition: width 1s linear;
+    }
+
+    .panel-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1rem;
+      text-align: center;
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto;
+    }
+
+    input, select, button {
+      padding: 0.85rem;
+      border-radius: 10px;
+      border: none;
+      font-size: clamp(1rem, 4vw, 1.15rem);
+    }
+
+    .color-picker {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+    .btn-color {
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      text-transform: uppercase;
+      min-height: 55px;
+    }
+    .btn-color:disabled { opacity: 0.2; }
+
+    /* Barra de Comodines */
+    .comodines-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .btn-comodin {
+      flex: 1;
+      background: #232d3f;
+      color: white;
+      font-weight: bold;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      padding: 0.7rem;
+      cursor: pointer;
+      min-height: 48px;
+    }
+    .btn-comodin:disabled { opacity: 0.25; cursor: not-allowed; }
+
+    #parrot-box {
+      background: #1e2838;
+      border: 2px solid #ffb703;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      text-align: center;
+      margin-bottom: 0.6rem;
+      display: none;
+    }
+
+    /* Opciones A, B, C, D Responsivas */
+    .answers-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      min-height: 200px;
+    }
+    .btn-opt {
+      font-size: clamp(2.2rem, 9vw, 3.5rem);
+      font-weight: 900;
+      background: #1c2433;
+      color: white;
+      border-radius: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      border-bottom: 5px solid rgba(0,0,0,0.3);
+    }
+    .btn-opt:active { transform: scale(0.96); }
+    .btn-opt:disabled { opacity: 0.2; }
+    .btn-opt.selected { background: #ffb703; color: black; }
+
+    /* Desempate por Año Responsivo */
+    .year-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0.8rem;
+      width: 100%;
+    }
+    .year-box input[type="number"] {
+      width: 100%;
+      max-width: 280px;
+      font-size: clamp(2.5rem, 10vw, 3.5rem);
+      font-weight: 900;
+      text-align: center;
+      background: #1c2433;
+      color: #ffb703;
+      border: 3px solid #ffb703;
+    }
+    .year-stepper {
+      display: flex;
+      gap: 0.4rem;
+      width: 100%;
+      max-width: 280px;
+    }
+    .year-stepper button {
+      flex: 1;
+      background: #232d3f;
+      color: white;
+      font-weight: bold;
+      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+      padding: 0.7rem 0;
+    }
+    .btn-send-year {
+      width: 100%;
+      max-width: 280px;
+      background: #2a9d8f;
+      color: white;
+      font-weight: 900;
+      font-size: 1.25rem;
+      padding: 1rem;
+      cursor: pointer;
+    }
+
+    #confirmed-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #192333;
+      border: 2px solid #2a9d8f;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="user-bar" class="hidden">
+    <span id="txt-name">Nombre</span>
+    <span id="txt-color">COLOR</span>
+  </div>
+
+  <div class="time-bar-wrapper hidden" id="player-time-box">
+    <div class="time-bar-fill" id="player-time-bar"></div>
+  </div>
+
+  <!-- REGISTRO -->
+  <div id="screen-reg" class="panel-center">
+    <h2 style="color: #ffb703; font-size: clamp(1.4rem, 5vw, 1.8rem);">Ingreso al Combate</h2>
+    <input type="text" id="in-name" placeholder="Tu Nombre o Apodo" maxlength="12">
+    <p style="color: #94a3b8; font-size: 0.95rem;">Elige tu color del Risk:</p>
+    <div class="color-picker">
+      <button class="btn-color" data-color="rojo" style="background:var(--rojo);">Rojo</button>
+      <button class="btn-color" data-color="azul" style="background:var(--azul);">Azul</button>
+      <button class="btn-color" data-color="amarillo" style="background:var(--amarillo); color:#000;">Amarillo</button>
+      <button class="btn-color" data-color="verde" style="background:var(--verde);">Verde</button>
+      <button class="btn-color" data-color="negro" style="background:var(--negro); grid-column: span 2;">Negro</button>
+    </div>
+  </div>
+
+  <!-- ESPERA -->
+  <div id="screen-wait" class="panel-center hidden">
+    <h3 style="font-size: clamp(1.2rem, 5vw, 1.6rem);">Esperando combate...</h3>
+    <p id="wait-msg" style="color: #94a3b8;">Atento al tablero físico y a la TV.</p>
+  </div>
+
+  <!-- DECLARAR ATAQUE -->
+  <div id="screen-attack" class="panel-center hidden">
+    <h2 style="color: #ffb703; font-size: clamp(1.3rem, 5vw, 1.7rem);">¡Tu Turno de Atacar!</h2>
+    <label style="color:#cbd5e1;">¿A quién vas a atacar?</label>
+    <select id="sel-rival" style="background:#1c2433; color:white;"></select>
+
+    <div style="background:#192333; padding:0.8rem; border-radius:10px; margin-top:0.6rem; border:1px solid #2e3e55;">
+      <button type="button" id="btn-toggle-comodin-cat" style="width:100%; background:#3b4a6b; color:#fff; cursor:pointer;">
+        🎯 Usar Comodín de Tema (<span id="cnt-c">0</span> disponibles)
+      </button>
+
+      <div id="box-cat-select" class="hidden" style="margin-top:0.6rem;">
+        <label style="font-size:0.9rem; color:#ffb703;">Elige la categoría:</label>
+        <select id="sel-cat" style="background:#111722; color:white; width:100%; margin-top:0.3rem;">
+          <option value="cultura_peruana">Cultura Peruana</option>
+          <option value="deportes">Deportes</option>
+          <option value="historia">Historia</option>
+          <option value="cine">Cine y Películas</option>
+          <option value="videojuegos">Videojuegos</option>
+          <option value="ciencia">Ciencia y Naturaleza</option>
+          <option value="geografia">Geografía</option>
+          <option value="musica">Música</option>
+          <option value="arte">Arte</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="btn-atacar" style="background:#e63946; color:white; font-weight:bold; font-size:1.25rem; margin-top:0.8rem; cursor:pointer;">
+      ⚔️ ¡LANZAR ATAQUE!
+    </button>
+
+    <button type="button" id="btn-pasar" style="background:#475569; color:white; font-weight:bold; font-size:1.1rem; margin-top:0.6rem; cursor:pointer;">
+      ⏭️ Omitir Ataque (Pasar Turno)
+    </button>
+  </div>
+
+  <!-- DUELO -->
+  <div id="screen-battle" class="hidden" style="flex:1; display:flex; flex-direction:column; max-width:450px; margin:0 auto; width:100%;">
+    <div class="comodines-row">
+      <button class="btn-comodin" id="btn-martillo">🔨 Martillo (<span id="cnt-m">0</span>)</button>
+      <button class="btn-comodin" id="btn-loro">🦜 Loro (<span id="cnt-l">0</span>)</button>
+    </div>
+
+    <div id="parrot-box"></div>
+
+    <!-- Opciones A B C D -->
+    <div class="answers-grid" id="grid-abcd">
+      <button class="btn-opt" data-opt="A">A</button>
+      <button class="btn-opt" data-opt="B">B</button>
+      <button class="btn-opt" data-opt="C">C</button>
+      <button class="btn-opt" data-opt="D">D</button>
+    </div>
+
+    <!-- Desempate por Años -->
+    <div class="year-box hidden" id="box-year-input">
+      <span style="color:#cbd5e1; font-weight:bold;">Escribe o ajusta el Año:</span>
+      <input type="number" id="in-year-num" placeholder="1900">
+      <div class="year-stepper">
+        <button type="button" onclick="ajustarAnio(-10)">-10</button>
+        <button type="button" onclick="ajustarAnio(-1)">-1</button>
+        <button type="button" onclick="ajustarAnio(+1)">+1</button>
+        <button type="button" onclick="ajustarAnio(+10)">+10</button>
+      </div>
+      <button class="btn-send-year" id="btn-send-year">ENVIAR AÑO</button>
+    </div>
+
+    <!-- Mensaje tras responder (oculta las opciones y evita clics dobles) -->
+    <div id="confirmed-box" class="hidden">
+      <h2 style="color:#2a9d8f; font-size:1.6rem; margin-bottom:0.4rem;">¡Respuesta Enviada!</h2>
+      <div id="txt-confirmed-val" style="font-size:2rem; font-weight:900; color:#ffb703;"></div>
+      <p style="color:#94a3b8; margin-top:0.6rem; font-size:0.95rem;">Mirando los resultados en la TV...</p>
+    </div>
+
+    <div id="txt-status" style="text-align:center; font-weight:bold; color:#ffb703; margin-top:0.6rem; min-height:1.2rem;"></div>
+  </div>
+
+  <script>
+    const socket = io();
+    let miJugador = null;
+    let yaRespondio = false;
+    let usandoComodinTema = false;
+    let timerOcultarPantalla = null;
+
+    const screenReg = document.getElementById('screen-reg');
+    const screenWait = document.getElementById('screen-wait');
+    const screenAttack = document.getElementById('screen-attack');
+    const screenBattle = document.getElementById('screen-battle');
+    const playerTimeBox = document.getElementById('player-time-box');
+    const playerTimeBar = document.getElementById('player-time-bar');
+    const parrotBox = document.getElementById('parrot-box');
+    const inYearNum = document.getElementById('in-year-num');
+    const txtStatus = document.getElementById('txt-status');
+    const boxCatSelect = document.getElementById('box-cat-select');
+    const btnToggleComodinCat = document.getElementById('btn-toggle-comodin-cat');
+    const confirmedBox = document.getElementById('confirmed-box');
+    const txtConfirmedVal = document.getElementById('txt-confirmed-val');
+
+    socket.on('lobby_colores_disponibles', (disp) => {
+      document.querySelectorAll('.btn-color').forEach(b => b.disabled = !disp.includes(b.dataset.color));
+    });
+
+    document.querySelectorAll('.btn-color').forEach(b => {
+      b.addEventListener('click', () => {
+        const nombre = document.getElementById('in-name').value.trim();
+        if (!nombre) return alert('Escribe tu nombre');
+        socket.emit('jugador_unirse', { nombre, color: b.dataset.color });
+      });
+    });
+
+    socket.on('registro_exitoso', (j) => {
+      miJugador = j;
+      screenReg.classList.add('hidden');
+      screenWait.classList.remove('hidden');
+
+      const uBar = document.getElementById('user-bar');
+      uBar.classList.remove('hidden');
+      uBar.style.backgroundColor = `var(--${j.color})`;
+      uBar.style.color = (j.color === 'amarillo') ? '#000' : '#fff';
+      document.getElementById('txt-name').textContent = j.nombre;
+      document.getElementById('txt-color').textContent = j.color.toUpperCase();
+
+      refrescarInventario(j.comodines);
+    });
+
+    socket.on('actualizar_comodines', (comodines) => {
+      if (miJugador) {
+        miJugador.comodines = comodines;
+        refrescarInventario(comodines);
+      }
+    });
+
+    function refrescarInventario(c) {
+      if (!c) return;
+      document.getElementById('cnt-m').textContent = c.martillo ?? 0;
+      document.getElementById('cnt-l').textContent = c.loro ?? 0;
+      document.getElementById('cnt-c').textContent = c.tema ?? 0;
+
+      btnToggleComodinCat.disabled = (c.tema ?? 0) <= 0;
+      document.getElementById('btn-martillo').disabled = (c.martillo ?? 0) <= 0;
+      document.getElementById('btn-loro').disabled = (c.loro ?? 0) <= 0;
+    }
+
+    socket.on('fuiste_expulsado', () => { alert('Expulsado de la sala.'); location.reload(); });
+
+    btnToggleComodinCat.addEventListener('click', () => {
+      if ((miJugador.comodines.tema ?? 0) <= 0) return alert('No te quedan comodines de tema.');
+      usandoComodinTema = !usandoComodinTema;
+      if (usandoComodinTema) {
+        boxCatSelect.classList.remove('hidden');
+        btnToggleComodinCat.style.background = '#2a9d8f';
+        btnToggleComodinCat.textContent = '✓ Comodín Activo (Gastará 1)';
+      } else {
+        boxCatSelect.classList.add('hidden');
+        btnToggleComodinCat.style.background = '#3b4a6b';
+        btnToggleComodinCat.textContent = `🎯 Usar Comodín de Tema (${miJugador.comodines.tema} disponibles)`;
+      }
+    });
+
+    socket.on('turno_actualizado', ({ atacanteId, jugadores }) => {
+      if (!miJugador) return;
+
+      if (socket.id === atacanteId) {
+        screenWait.classList.add('hidden');
+        screenBattle.classList.add('hidden');
+        screenAttack.classList.remove('hidden');
+
+        usandoComodinTema = false;
+        boxCatSelect.classList.add('hidden');
+        btnToggleComodinCat.style.background = '#3b4a6b';
+        btnToggleComodinCat.textContent = `🎯 Usar Comodín de Tema (${miJugador.comodines.tema} disponibles)`;
+
+        const sel = document.getElementById('sel-rival');
+        sel.innerHTML = '';
+        jugadores.filter(r => r.id !== socket.id).forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.color;
+          opt.textContent = `${r.nombre} (${r.color.toUpperCase()})`;
+          sel.appendChild(opt);
+        });
+      } else {
+        screenAttack.classList.add('hidden');
+        screenBattle.classList.add('hidden');
+        screenWait.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-atacar').addEventListener('click', () => {
+      socket.emit('declarar_ataque', {
+        defensorColor: document.getElementById('sel-rival').value,
+        categoriaDeseada: document.getElementById('sel-cat').value,
+        usoComodinTema: usandoComodinTema
+      });
+    });
+
+    socket.on('tick_tiempo', ({ tiempo, total }) => {
+      if (miJugador && !screenBattle.classList.contains('hidden')) {
+        playerTimeBox.classList.remove('hidden');
+        playerTimeBar.style.width = `${(tiempo / total) * 100}%`;
+      }
+    });
+
+    // Ronda activa
+    socket.on('tu_turno_responder', ({ tipo, anioMin, anioMax }) => {
+      clearTimeout(timerOcultarPantalla);
+
+      yaRespondio = false;
+      screenWait.classList.add('hidden');
+      screenAttack.classList.add('hidden');
+      screenBattle.classList.remove('hidden');
+      confirmedBox.classList.add('hidden');
+
+      parrotBox.style.display = 'none';
+      txtStatus.textContent = '';
+
+      const isAprox = tipo === 'aproximacion';
+      document.getElementById('grid-abcd').classList.toggle('hidden', isAprox);
+      document.getElementById('box-year-input').classList.toggle('hidden', !isAprox);
+
+      document.getElementById('btn-martillo').disabled = isAprox || (miJugador.comodines.martillo <= 0);
+      document.getElementById('btn-loro').disabled = miJugador.comodines.loro <= 0;
+
+      if (isAprox) {
+        inYearNum.disabled = false;
+        document.getElementById('btn-send-year').disabled = false;
+        inYearNum.value = Math.floor(((anioMin || 1800) + (anioMax || 2020)) / 2);
+        setTimeout(() => inYearNum.focus(), 250);
+      } else {
+        document.querySelectorAll('.btn-opt').forEach(b => {
+          b.disabled = false;
+          b.classList.remove('selected');
+        });
+      }
+    });
+
+    window.ajustarAnio = function(delta) {
+      if (yaRespondio) return;
+      let val = parseInt(inYearNum.value) || 1900;
+      inYearNum.value = val + delta;
+    };
+
+    document.getElementById('btn-send-year').addEventListener('click', () => {
+      if (yaRespondio) return;
+      const val = inYearNum.value.trim();
+      if (!val) return alert('Escribe un año válido');
+      yaRespondio = true;
+      socket.emit('enviar_respuesta', { opcion: val });
+
+      document.getElementById('box-year-input').classList.add('hidden');
+      confirmedBox.classList.remove('hidden');
+      txtConfirmedVal.textContent = val;
+    });
+
+    document.querySelectorAll('.btn-opt').forEach(b => {
+      b.addEventListener('click', () => {
+        if (yaRespondio) return;
+        const op = b.dataset.opt;
+        yaRespondio = true;
+        socket.emit('enviar_respuesta', { opcion: op });
+
+        document.getElementById('grid-abcd').classList.add('hidden');
+        confirmedBox.classList.remove('hidden');
+        txtConfirmedVal.textContent = `Opción [ ${op} ]`;
+      });
+    });
+
+    socket.on('respuesta_confirmada', () => {
+      document.getElementById('btn-martillo').disabled = true;
+      document.getElementById('btn-loro').disabled = true;
+    });
+
+    // Martillo
+    document.getElementById('btn-martillo').addEventListener('click', () => {
+      if (!yaRespondio) socket.emit('usar_martillo');
+    });
+    socket.on('efecto_martillo_privado', ({ descartadas }) => {
+      document.getElementById('btn-martillo').disabled = true;
+      descartadas.forEach(d => {
+        const btn = document.querySelector(`.btn-opt[data-opt="${d}"]`);
+        if (btn) btn.disabled = true;
+      });
+    });
+
+    // Loro
+    document.getElementById('btn-loro').addEventListener('click', () => {
+      if (!yaRespondio) socket.emit('usar_loro');
+    });
+    socket.on('efecto_loro_privado', (res) => {
+      document.getElementById('btn-loro').disabled = true;
+      if (res.tipo === 'aproximacion') {
+        parrotBox.innerHTML = `🦜 <strong>Consejo del Loro:</strong><br>${res.pista}`;
+      } else {
+        parrotBox.innerHTML = `🦜 <strong>Consejo del Loro:</strong><br>` +
+          Object.entries(res.porcentajes).map(([o, v]) => `<strong>${o}:</strong> ${v}%`).join(' | ');
+      }
+      parrotBox.style.display = 'block';
+    });
+
+    document.getElementById('btn-pasar').addEventListener('click', () => {
+      if (confirm('¿Deseas omitir tu ataque y pasar el turno al siguiente jugador?')) {
+        socket.emit('pasar_turno');
+      }
+    });
+
+    // Fin de Duelo
+    socket.on('fin_duelo', (res) => {
+      if (res.ganador) {
+        const soyGanador = res.ganador.id === socket.id;
+        txtStatus.textContent = soyGanador ? '🎉 ¡GANASTE EL COMBATE!' : '💀 PERDISTE EL COMBATE';
+        txtStatus.style.color = soyGanador ? '#2dc653' : '#e63946';
+      } else if (res.requiereDesempate) {
+        txtStatus.textContent = '⚖️ ¡EMPATE! Pasando a desempate de AÑOS...';
+        txtStatus.style.color = '#ffb703';
+      }
+
+      if (!res.requiereDesempate) {
+        clearTimeout(timerOcultarPantalla);
+        timerOcultarPantalla = setTimeout(() => {
+          screenBattle.classList.add('hidden');
+          playerTimeBox.classList.add('hidden');
+          screenWait.classList.remove('hidden');
+        }, 6500);
+      }
+    });
+  </script>
+</body>
+</html>
