@@ -247,10 +247,10 @@
     const selPrimerTurno = document.getElementById('cfg-primer-turno');
     const hostTimeBar = document.getElementById('host-time-bar');
 
-    socket.on('info_servidor', ({ ip, port }) => {
-      const fullUrl = `http://${ip}:${port}/player.html`;
-      document.getElementById('url-text').textContent = fullUrl;
-      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(fullUrl)}`;
+    socket.on('info_servidor', () => {
+      const renderUrl = 'https://risk-trivia.onrender.com/player.html';
+      document.getElementById('url-text').textContent = renderUrl;
+      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(renderUrl)}`;
     });
 
     document.getElementById('btn-aplicar-cfg').addEventListener('click', () => {

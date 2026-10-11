@@ -130,6 +130,20 @@ io.on('connection', (socket) => {
     broadcastTurno();
   });
 
+  socket.on('pasar_turno', () => {
+    const jugador = gameManager.jugadores[socket.id];
+    if (!jugador) return;
+
+    const atacante = gameManager.obtenerAtacanteEnTurno();
+    if (atacante && atacante.id === socket.id) {
+      gameManager.avanzarTurno();
+      io.emit('alerta_comodin_publico', {
+        mensaje: `⏩ ${jugador.nombre} (${jugador.color.toUpperCase()}) omitió su ataque y pasó el turno.`
+      });
+      broadcastTurno();
+    }
+  });
+
   socket.on('expulsar_jugador', ({ socketId }) => {
     const color = gameManager.removerJugador(socketId);
     if (color) {

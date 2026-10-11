@@ -253,6 +253,10 @@
     <button id="btn-atacar" style="background:#e63946; color:white; font-weight:bold; font-size:1.25rem; margin-top:0.8rem; cursor:pointer;">
       ⚔️ ¡LANZAR ATAQUE!
     </button>
+
+    <button type="button" id="btn-pasar" style="background:#475569; color:white; font-weight:bold; font-size:1.1rem; margin-top:0.6rem; cursor:pointer;">
+      ⏭️ Omitir Ataque (Pasar Turno)
+    </button>
   </div>
 
   <!-- DUELO -->
@@ -554,6 +558,12 @@
           playerTimeBox.classList.add('hidden');
           screenWait.classList.remove('hidden');
         }, 6500);
+      }
+    });
+
+    document.getElementById('btn-pasar').addEventListener('click', () => {
+      if (confirm('¿Deseas omitir tu ataque y pasar el turno al siguiente comandante?')) {
+        socket.emit('pasar_turno');
       }
     });
   </script>
