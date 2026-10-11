@@ -8,7 +8,6 @@ class GameManager {
     this.indiceTurnoActual = 0;
     this.preguntasUsadasIds = [];
 
-    // Configuración base con 3 comodines de cada tipo por defecto
     this.configuracion = {
       comodinesHabilitados: true,
       martillosPorJugador: 3,
@@ -99,7 +98,12 @@ class GameManager {
     this.indiceTurnoActual = (this.indiceTurnoActual + 1) % this.ordenTurnos.length;
   }
 
-  // 1. Comodín: Elegir tema
+  cancelarDuelo() {
+    this.estado = 'LOBBY';
+    this.dueloActual = { atacanteId: null, defensorId: null, pregunta: null, esDesempate: false };
+    this.tiempoInicioPregunta = null;
+  }
+
   usarComodinTema(socketId) {
     const j = this.jugadores[socketId];
     if (!j || !this.configuracion.comodinesHabilitados) return false;
@@ -108,7 +112,6 @@ class GameManager {
     return true;
   }
 
-  // 2. Comodín: Martillo
   usarMartillo(socketId) {
     const j = this.jugadores[socketId];
     if (this.dueloActual.pregunta?.tipo === 'aproximacion') return null;
@@ -121,7 +124,6 @@ class GameManager {
     return { descartadas, restantes: j.comodines };
   }
 
-  // 3. Comodín: Loro
   usarLoro(socketId) {
     const j = this.jugadores[socketId];
     if (!j || j.comodines.loro <= 0 || !this.dueloActual.pregunta) return null;
@@ -131,10 +133,10 @@ class GameManager {
 
     if (preg.tipo === 'aproximacion') {
       const anio = parseInt(preg.correcta);
-      const margen = Math.floor(Math.random() * 8) + 5;
+      const margen = Math.max(3, Math.round(anio * 0.15));
       return {
         tipo: 'aproximacion',
-        pista: `Mis plumas me dicen: ¡Entre el año ${anio - margen} y el año ${anio + margen}!`,
+        pista: `Mis plumas me dicen: ¡Entre ${Math.max(0, anio - margen)} y ${anio + margen}!`,
         restantes: j.comodines
       };
     } else {
@@ -157,13 +159,6 @@ class GameManager {
     }
   }
 
-  pasarTurno(socketId) {
-    const atacanteActual = this.obtenerAtacanteEnTurno();
-    if (!atacanteActual || atacanteActual.id !== socketId) return false;
-    this.avanzarTurno();
-    return true;
-  }
-
   iniciarDuelo(atacanteId, defensorId, pregunta, esDesempate = false) {
     this.estado = esDesempate ? 'DESEMPATE' : 'DUELO';
     this.dueloActual = { atacanteId, defensorId, pregunta, esDesempate };
@@ -173,7 +168,6 @@ class GameManager {
       this.preguntasUsadasIds.push(pregunta.id);
     }
 
-    // Limpieza de respuestas anteriores
     if (this.jugadores[atacanteId]) {
       this.jugadores[atacanteId].respuesta = null;
       this.jugadores[atacanteId].tiempoRespuesta = null;
@@ -195,22 +189,28 @@ class GameManager {
     return true;
   }
 
-  // Verifica si ambos contrincantes ya enviaron su respuesta
   ambosRespondieron() {
     const at = this.jugadores[this.dueloActual.atacanteId];
     const def = this.jugadores[this.dueloActual.defensorId];
-    return (at && at.respuesta !== null) && (def && def.respuesta !== null);
+    const atListo = !at || at.respuesta !== null;
+    const defListo = !def || def.respuesta !== null;
+    return atListo && defListo;
   }
 
   resolverDuelo() {
-    const at = this.jugadores[this.dueloActual.atacanteId];
-    const def = this.jugadores[this.dueloActual.defensorId];
-    const preg = this.dueloActual.pregunta;
+    // Si un jugador desconectó el teléfono, se usa un fallback seguro para evitar excepciones
+    const at = this.jugadores[this.dueloActual.atacanteId] || {
+      id: this.dueloActual.atacanteId, nombre: 'Atacante (Desconectado)', color: 'rojo', respuesta: null, tiempoRespuesta: 99999
+    };
+    const def = this.jugadores[this.dueloActual.defensorId] || {
+      id: this.dueloActual.defensorId, nombre: 'Defensor (Desconectado)', color: 'azul', respuesta: null, tiempoRespuesta: 99999
+    };
+    const preg = this.dueloActual.pregunta || { tipo: 'opcion_multiple', correcta: 'A' };
 
     if (preg.tipo === 'aproximacion') {
-      const target = parseInt(preg.correcta);
-      const respAtNum = at?.respuesta !== null ? parseInt(at.respuesta) : null;
-      const respDefNum = def?.respuesta !== null ? parseInt(def.respuesta) : null;
+      const target = parseInt(preg.correcta) || 0;
+      const respAtNum = (at.respuesta !== null && !isNaN(parseInt(at.respuesta))) ? parseInt(at.respuesta) : null;
+      const respDefNum = (def.respuesta !== null && !isNaN(parseInt(def.respuesta))) ? parseInt(def.respuesta) : null;
 
       const diffAt = respAtNum !== null ? Math.abs(target - respAtNum) : 99999;
       const diffDef = respDefNum !== null ? Math.abs(target - respDefNum) : 99999;
@@ -218,34 +218,35 @@ class GameManager {
       let ganador = null;
       let motivo = '';
 
-      if (diffAt < diffDef) {
+      if (respAtNum === null && respDefNum === null) {
+        motivo = 'Ninguno de los dos comandantes envió un número.';
+      } else if (diffAt < diffDef) {
         ganador = at;
-        motivo = `¡Más cerca del año exacto (${target}) por ${diffDef - diffAt} años de diferencia!`;
+        motivo = `¡Más cerca del valor exacto (${target}) por ${diffDef === 99999 ? 'ausencia del rival' : (diffDef - diffAt) + ' unidades'}!`;
       } else if (diffDef < diffAt) {
         ganador = def;
-        motivo = `¡Más cerca del año exacto (${target}) por ${diffAt - diffDef} años de diferencia!`;
-      } else if (respAtNum !== null && respDefNum !== null) {
-        if (at.tiempoRespuesta < def.tiempoRespuesta) {
+        motivo = `¡Más cerca del valor exacto (${target}) por ${diffAt === 99999 ? 'ausencia del rival' : (diffAt - diffDef) + ' unidades'}!`;
+      } else {
+        // Empate exacto en número: define velocidad
+        if ((at.tiempoRespuesta || 99999) < (def.tiempoRespuesta || 99999)) {
           ganador = at;
-          motivo = `¡Misma distancia, pero respondió en ${(at.tiempoRespuesta/1000).toFixed(2)}s vs ${(def.tiempoRespuesta/1000).toFixed(2)}s!`;
+          motivo = `¡Misma distancia, pero respondió más rápido (${(at.tiempoRespuesta/1000).toFixed(2)}s vs ${(def.tiempoRespuesta/1000).toFixed(2)}s)!`;
         } else {
           ganador = def;
-          motivo = `¡Misma distancia, pero respondió en ${(def.tiempoRespuesta/1000).toFixed(2)}s vs ${(at.tiempoRespuesta/1000).toFixed(2)}s!`;
+          motivo = `¡Misma distancia, pero respondió más rápido (${(def.tiempoRespuesta/1000).toFixed(2)}s vs ${(at.tiempoRespuesta/1000).toFixed(2)}s)!`;
         }
-      } else {
-        motivo = 'Ninguno respondió a tiempo.';
       }
 
       return {
         tipo: 'aproximacion',
         correcta: target,
         atacante: {
-          id: at?.id, nombre: at?.nombre || 'Atacante', color: at?.color || 'rojo',
-          resp: respAtNum, diff: diffAt === 99999 ? null : diffAt, tiempoMs: at?.tiempoRespuesta || 0
+          id: at.id, nombre: at.nombre, color: at.color,
+          resp: respAtNum, diff: diffAt === 99999 ? null : diffAt, tiempoMs: at.tiempoRespuesta || 0
         },
         defensor: {
-          id: def?.id, nombre: def?.nombre || 'Defensor', color: def?.color || 'azul',
-          resp: respDefNum, diff: diffDef === 99999 ? null : diffDef, tiempoMs: def?.tiempoRespuesta || 0
+          id: def.id, nombre: def.nombre, color: def.color,
+          resp: respDefNum, diff: diffDef === 99999 ? null : diffDef, tiempoMs: def.tiempoRespuesta || 0
         },
         ganador: ganador ? { id: ganador.id, nombre: ganador.nombre, color: ganador.color } : null,
         motivo,
@@ -253,8 +254,8 @@ class GameManager {
       };
     } else {
       const correcta = preg.correcta;
-      const atOk = at && at.respuesta === correcta;
-      const defOk = def && def.respuesta === correcta;
+      const atOk = at.respuesta === correcta;
+      const defOk = def.respuesta === correcta;
 
       let ganador = null;
       let motivo = '';
@@ -268,21 +269,21 @@ class GameManager {
         motivo = `¡Acertó la respuesta correcta [${correcta}]!`;
       } else if (atOk && defOk) {
         requiereDesempate = true;
-        motivo = '¡Ambos acertaron! Pasando a desempate de precisión por AÑOS...';
+        motivo = '¡Ambos acertaron! Pasando a desempate numérico de Diana...';
       } else {
-        motivo = 'Ambos fallaron la pregunta.';
+        motivo = 'Ambos fallaron la trivia.';
       }
 
       return {
         tipo: 'opcion_multiple',
         correcta,
         atacante: {
-          id: at?.id, nombre: at?.nombre || 'Atacante', color: at?.color || 'rojo',
-          resp: at?.respuesta, tiempoMs: at?.tiempoRespuesta || 0, acerto: atOk
+          id: at.id, nombre: at.nombre, color: at.color,
+          resp: at.respuesta, tiempoMs: at.tiempoRespuesta || 0, acerto: atOk
         },
         defensor: {
-          id: def?.id, nombre: def?.nombre || 'Defensor', color: def?.color || 'azul',
-          resp: def?.respuesta, tiempoMs: def?.tiempoRespuesta || 0, acerto: defOk
+          id: def.id, nombre: def.nombre, color: def.color,
+          resp: def.respuesta, tiempoMs: def.tiempoRespuesta || 0, acerto: defOk
         },
         ganador: ganador ? { id: ganador.id, nombre: ganador.nombre, color: ganador.color } : null,
         motivo,

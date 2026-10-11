@@ -61,9 +61,9 @@ function resolverYFinalizar() {
 
   if (resolucion.requiereDesempate) {
     setTimeout(() => {
-      io.emit('alerta_desempate', '¡EMPATE! Pasando a desempate de AÑOS...');
+      io.emit('alerta_desempate', '¡EMPATE! Pasando a desempate numérico de Diana...');
       ejecutarDuelo(gameManager.dueloActual.atacanteId, gameManager.dueloActual.defensorId, 'aleatorio', true);
-    }, 3500);
+    }, 3200);
   } else {
     gameManager.avanzarTurno();
     setTimeout(() => broadcastTurno(), 6500);
@@ -76,8 +76,8 @@ async function ejecutarDuelo(atacanteId, defensorId, categoria, esDesempate) {
 
   gameManager.iniciarDuelo(atacanteId, defensorId, pregunta, esDesempate);
 
-  const at = gameManager.jugadores[atacanteId];
-  const def = gameManager.jugadores[defensorId];
+  const at = gameManager.jugadores[atacanteId] || { id: atacanteId, nombre: 'Atacante', color: 'rojo' };
+  const def = gameManager.jugadores[defensorId] || { id: defensorId, nombre: 'Defensor', color: 'azul' };
 
   io.emit('comenzar_duelo', {
     atacante: { id: at.id, nombre: at.nombre, color: at.color },
@@ -122,25 +122,20 @@ io.on('connection', (socket) => {
     broadcastTurno();
   });
 
+  // BOTÓN DEL HOST: TERMINAR JUEGO Y FORZAR REGRESO AL LOBBY
+  socket.on('forzar_terminar_juego', () => {
+    clearInterval(timerInterval);
+    gameManager.cancelarDuelo();
+    io.emit('juego_cancelado_por_host');
+    broadcastTurno();
+  });
+
   socket.on('expulsar_jugador', ({ socketId }) => {
     const color = gameManager.removerJugador(socketId);
     if (color) {
       io.to(socketId).emit('fuiste_expulsado');
       io.emit('lobby_colores_disponibles', gameManager.obtenerColoresDisponibles());
       io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
-      broadcastTurno();
-    }
-  });
-
-  socket.on('pasar_turno', () => {
-    const jugador = gameManager.jugadores[socket.id];
-    if (!jugador) return;
-
-    const pudoPasar = gameManager.pasarTurno(socket.id);
-    if (pudoPasar) {
-      io.emit('alerta_comodin_publico', {
-        mensaje: `⏩ ${jugador.nombre} (${jugador.color.toUpperCase()}) omitió su ataque y pasó el turno.`
-      });
       broadcastTurno();
     }
   });
@@ -181,9 +176,9 @@ io.on('connection', (socket) => {
     if (ok) {
       const j = gameManager.jugadores[socket.id];
       socket.emit('respuesta_confirmada', { opcion });
-      io.emit('jugador_ha_respondido', { color: j.color });
+      io.emit('jugador_ha_respondido', { color: j ? j.color : 'gris' });
 
-      // Si ambos contrincantes ya respondieron, corte inmediato
+      // Si ambos respondieron, corte inmediato sin esperar el reloj
       if (gameManager.ambosRespondieron()) {
         resolverYFinalizar();
       }
@@ -215,7 +210,13 @@ io.on('connection', (socket) => {
     if (color) {
       io.emit('lobby_colores_disponibles', gameManager.obtenerColoresDisponibles());
       io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
-      broadcastTurno();
+      
+      // Si el desconectado estaba en duelo, resolver inmediatamente para que no se quede colgado
+      if (gameManager.estado !== 'LOBBY' && (socket.id === gameManager.dueloActual.atacanteId || socket.id === gameManager.dueloActual.defensorId)) {
+        resolverYFinalizar();
+      } else {
+        broadcastTurno();
+      }
     }
   });
 });

@@ -28,30 +28,20 @@
     .btn-kick { background: rgba(0,0,0,0.4); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; }
 
     /* DUELO ESTILO TRIVIADOR */
-    #view-battle { width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center; }
+    #view-battle { width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center; position: relative; }
+
+    .header-duel-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+    .btn-abort { background: #d90429; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
     .time-bar-container { width: 100%; height: 16px; background: #222b3c; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; border: 2px solid #3e4c63; }
     .time-bar { height: 100%; width: 100%; background: #2a9d8f; transition: width 1s linear, background-color 0.5s; }
     .time-bar.danger { background: #e63946 !important; }
 
     .pergamino {
-      background: #fbf2c4;
-      color: #523912;
-      border: 5px solid #c7a75c;
-      border-radius: 10px;
-      padding: 1.2rem 2rem;
-      width: 100%;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-      font-size: 1.6rem; /* Tamaño balanceado para pregunta bilingüe */
-      font-weight: bold;
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      white-space: pre-line; /* Permite el salto de línea para el inglés y español */
-      line-height: 1.35;
+      background: #fbf2c4; color: #523912; border: 5px solid #c7a75c; border-radius: 10px;
+      padding: 1.2rem 2rem; width: 100%; text-align: center; position: relative; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      font-size: 1.6rem; font-weight: bold; min-height: 120px; display: flex; align-items: center; justify-content: center;
+      white-space: pre-line; line-height: 1.35;
     }
     .badge-tiempo {
       position: absolute; top: -18px; background: #e63946; color: white; padding: 0.2rem 1.4rem;
@@ -69,15 +59,8 @@
     /* Opciones Madera */
     .options-stack { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; justify-content: center; }
     .wood-option {
-      background: #ece3cc;
-      color: #2b1f0d !important;
-      border: 4px solid #7c5828;
-      border-radius: 8px;
-      padding: 0.8rem 1.2rem;
-      font-size: 1.2rem; /* Tamaño balanceado para opciones bilingües */
-      font-weight: bold;
-      transition: all 0.3s;
-      line-height: 1.3;
+      background: #ece3cc; color: #2b1f0d !important; border: 4px solid #7c5828; border-radius: 8px;
+      padding: 0.8rem 1.2rem; font-size: 1.2rem; font-weight: bold; transition: all 0.3s; line-height: 1.3;
     }
     .wood-option.voted-rojo { background: var(--rojo) !important; color: white !important; }
     .wood-option.voted-azul { background: var(--azul) !important; color: white !important; }
@@ -86,7 +69,7 @@
     .wood-option.voted-negro { background: var(--negro) !important; color: white !important; }
     .wood-option.gold-correct { border: 5px solid var(--gold) !important; box-shadow: 0 0 25px var(--gold); transform: scale(1.02); }
 
-    /* DIANA / BLANCO TRIVIADOR */
+    /* DIANA TRIVIADOR */
     .diana-container {
       flex: 1; height: 320px; background: #111722; border-radius: 16px; border: 3px solid #7c5828;
       position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -111,7 +94,7 @@
 
     #winner-banner {
       width: 100%; background: linear-gradient(90deg, #d90429, #f77f00);
-      color: #fff; text-align: center; font-size: 2rem; font-weight: 900;
+      color: #fff; text-align: center; font-size: 1.8rem; font-weight: 900;
       padding: 1rem; border-radius: 10px; border: 4px solid #ffd700;
       margin-bottom: 1.2rem; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
     }
@@ -168,6 +151,11 @@
 
   <!-- PANTALLA DUELO -->
   <div id="view-battle" class="hidden">
+    <div class="header-duel-bar">
+      <span style="color:#ffb703; font-weight:bold;">⚔️ Combate en curso</span>
+      <button class="btn-abort" id="btn-abort-match">⏹️ Terminar Juego / Volver al Lobby</button>
+    </div>
+
     <div id="winner-banner"></div>
 
     <div class="time-bar-container">
@@ -194,7 +182,7 @@
         <div class="wood-option" id="box-D">D) <span id="lbl-D">...</span></div>
       </div>
 
-      <!-- Desempate Años: Diana Triviador -->
+      <!-- Desempate Numérico / Diana -->
       <div class="diana-container hidden" id="options-year">
         <div class="center-target-value" id="target-exact-val">?</div>
 
@@ -272,7 +260,20 @@
         tiempo: document.getElementById('cfg-tiempo').value
       });
       socket.emit('fijar_primer_turno', { colorOId: selPrimerTurno.value });
-      mostrarAlerta('Ajustes guardados y aplicados a todos.');
+      mostrarAlerta('Ajustes guardados.');
+    });
+
+    // Botón para abortar el combate en cualquier momento
+    document.getElementById('btn-abort-match').addEventListener('click', () => {
+      if (confirm('¿Terminar el combate actual y volver al Lobby?')) {
+        socket.emit('forzar_terminar_juego');
+      }
+    });
+
+    socket.on('juego_cancelado_por_host', () => {
+      viewBattle.classList.add('hidden');
+      viewLobby.classList.remove('hidden');
+      mostrarAlerta('Combate terminado por el Host.');
     });
 
     socket.on('actualizacion_jugadores', (jugadores) => {
@@ -314,7 +315,7 @@
         const el = document.getElementById(`box-${o}`);
         el.className = 'wood-option';
         el.style.background = '';
-        el.style.color = '#2b1f0d'; 
+        el.style.color = '#2b1f0d'; // <--- Limpieza garantizada de color
       });
 
       document.getElementById('target-exact-val').textContent = '?';
@@ -357,18 +358,22 @@
       playBeep(880, 0.4);
 
       if (res.ganador) {
-        winnerBanner.innerHTML = `🏆 ¡VICTORIA DE ${res.ganador.nombre.toUpperCase()}! <br><span style="font-size:1.2rem; font-weight:normal;">${res.motivo}</span>`;
+        winnerBanner.innerHTML = `🏆 ¡VICTORIA DE ${res.ganador.nombre.toUpperCase()}! <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
         winnerBanner.style.background = `linear-gradient(90deg, var(--${res.ganador.color}), #f77f00)`;
         winnerBanner.style.display = 'block';
       } else if (res.requiereDesempate) {
-        winnerBanner.innerHTML = `⚖️ ¡EMPATE! <br><span style="font-size:1.2rem; font-weight:normal;">${res.motivo}</span>`;
+        winnerBanner.innerHTML = `⚖️ ¡EMPATE! <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
         winnerBanner.style.background = '#ffb703';
         winnerBanner.style.color = '#000';
+        winnerBanner.style.display = 'block';
+      } else {
+        winnerBanner.innerHTML = `⚖️ RONDA TERMINADA <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
+        winnerBanner.style.background = '#475569';
+        winnerBanner.style.color = '#fff';
         winnerBanner.style.display = 'block';
       }
 
       if (res.tipo === 'aproximacion') {
-        // Revela el número exacto en el centro de la diana
         document.getElementById('target-exact-val').textContent = res.correcta;
 
         const at = res.atacante;
@@ -388,20 +393,27 @@
         document.getElementById('val-guess-def').textContent = def.resp !== null ? def.resp : 'Sin resp.';
         document.getElementById('time-guess-def').textContent = def.tiempoMs ? `${(def.tiempoMs/1000).toFixed(2)}s` : '-';
 
-        // Posiciona las flechas según la diferencia
-        posicionarFlecha('at', at.diff, at.color, 280, 100, res.correcta);
-        posicionarFlecha('def', def.diff, def.color, 320, 500, res.correcta);
-
+        posicionarFlecha('at', at.diff, at.color, 280, 100);
+        posicionarFlecha('def', def.diff, def.color, 320, 500);
       } else {
         if (res.atacante.resp && res.defensor.resp && res.atacante.resp === res.defensor.resp) {
           const el = document.getElementById(`box-${res.atacante.resp}`);
-          el.style.background = `linear-gradient(90deg, var(--${res.atacante.color}) 50%, var(--${res.defensor.color}) 50%)`;
-          el.style.color = '#fff';
+          if (el) {
+            el.style.background = `linear-gradient(90deg, var(--${res.atacante.color}) 50%, var(--${res.defensor.color}) 50%)`;
+            el.style.color = '#fff';
+          }
         } else {
-          if (res.atacante.resp) document.getElementById(`box-${res.atacante.resp}`).classList.add(`voted-${res.atacante.color}`);
-          if (res.defensor.resp) document.getElementById(`box-${res.defensor.resp}`).classList.add(`voted-${res.defensor.color}`);
+          if (res.atacante.resp) {
+            const elAt = document.getElementById(`box-${res.atacante.resp}`);
+            if (elAt) elAt.classList.add(`voted-${res.atacante.color}`);
+          }
+          if (res.defensor.resp) {
+            const elDef = document.getElementById(`box-${res.defensor.resp}`);
+            if (elDef) elDef.classList.add(`voted-${res.defensor.color}`);
+          }
         }
-        document.getElementById(`box-${res.correcta}`).classList.add('gold-correct');
+        const elCor = document.getElementById(`box-${res.correcta}`);
+        if (elCor) elCor.classList.add('gold-correct');
       }
 
       if (!res.requiereDesempate) {
@@ -412,7 +424,7 @@
       }
     });
 
-    function posicionarFlecha(lado, diff, color, targetX, startX, correcta) {
+    function posicionarFlecha(lado, diff, color, targetX, startX) {
       const g = document.getElementById(`arrow-${lado}`);
       const line = document.getElementById(`line-arrow-${lado}`);
       const head = document.getElementById(`head-arrow-${lado}`);
@@ -422,15 +434,11 @@
         return;
       }
 
-      // Si acertó exactamente al centro (diferencia 0)
       let offset = 0;
-      if (diff === 0) {
-        offset = 0; // Clavado en el centro
-      } else {
-        // Escala proporcional: si está cerca queda en los aros interiores, si está lejos en los exteriores
-        const ratio = Math.min(diff / Math.max(correcta * 0.2, 5), 1);
-        offset = Math.round(35 + (ratio * 110));
-      }
+      if (diff === 0) offset = 0;
+      else if (diff <= 5) offset = 40;
+      else if (diff <= 15) offset = 90;
+      else offset = 140;
 
       const hitX = (lado === 'at') ? (300 - offset) : (300 + offset);
 
@@ -444,7 +452,6 @@
         head.setAttribute('points', `${hitX},172 ${hitX - 16},180 ${hitX},188`);
       }
       head.setAttribute('fill', `var(--${color})`);
-
       g.setAttribute('opacity', '1');
     }
 

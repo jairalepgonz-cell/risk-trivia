@@ -15,7 +15,6 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     
-    /* Layout dinámico para cualquier tamaño de móvil */
     body {
       background: #111622;
       color: #fff;
@@ -86,7 +85,6 @@
     }
     .btn-color:disabled { opacity: 0.2; }
 
-    /* Barra de Comodines */
     .comodines-row {
       display: flex;
       gap: 0.5rem;
@@ -115,7 +113,6 @@
       display: none;
     }
 
-    /* Opciones A, B, C, D Responsivas */
     .answers-grid {
       flex: 1;
       display: grid;
@@ -140,7 +137,6 @@
     .btn-opt:disabled { opacity: 0.2; }
     .btn-opt.selected { background: #ffb703; color: black; }
 
-    /* Desempate por Año Responsivo */
     .year-box {
       flex: 1;
       display: flex;
@@ -247,21 +243,15 @@
           <option value="deportes">Deportes</option>
           <option value="historia">Historia</option>
           <option value="cine">Cine y Películas</option>
-          <option value="videojuegos">Videojuegos</option>
           <option value="ciencia">Ciencia y Naturaleza</option>
           <option value="geografia">Geografía</option>
-          <option value="musica">Música</option>
-          <option value="arte">Arte</option>
+          <option value="arte">Arte y Literatura</option>
         </select>
       </div>
     </div>
 
     <button id="btn-atacar" style="background:#e63946; color:white; font-weight:bold; font-size:1.25rem; margin-top:0.8rem; cursor:pointer;">
       ⚔️ ¡LANZAR ATAQUE!
-    </button>
-
-    <button type="button" id="btn-pasar" style="background:#475569; color:white; font-weight:bold; font-size:1.1rem; margin-top:0.6rem; cursor:pointer;">
-      ⏭️ Omitir Ataque (Pasar Turno)
     </button>
   </div>
 
@@ -282,12 +272,10 @@
       <button class="btn-opt" data-opt="D">D</button>
     </div>
 
-    <!-- Desempate por Años -->
+    <!-- Desempate Numérico / Diana -->
     <div class="year-box hidden" id="box-year-input">
-      <span style="color:#cbd5e1; font-weight:bold; font-size:1.1rem;">Escribe tu número aproximado:</span>
-      <!-- INICIA TOTALMENTE VACÍO -->
+      <span style="color:#cbd5e1; font-weight:bold;">Escribe tu número aproximado:</span>
       <input type="number" id="in-year-num" placeholder="Escribe aquí..." inputmode="numeric">
-      
       <div class="year-stepper">
         <button type="button" onclick="ajustarNumero(-10)">-10</button>
         <button type="button" onclick="ajustarNumero(-1)">-1</button>
@@ -297,7 +285,7 @@
       <button class="btn-send-year" id="btn-send-year">ENVIAR NÚMERO</button>
     </div>
 
-    <!-- Mensaje tras responder (oculta las opciones y evita clics dobles) -->
+    <!-- Confirmación de Respuesta -->
     <div id="confirmed-box" class="hidden">
       <h2 style="color:#2a9d8f; font-size:1.6rem; margin-bottom:0.4rem;">¡Respuesta Enviada!</h2>
       <div id="txt-confirmed-val" style="font-size:2rem; font-weight:900; color:#ffb703;"></div>
@@ -308,6 +296,20 @@
   </div>
 
   <script>
+    // Wake Lock API: Mantiene encendida la pantalla del celular sin que se bloquee
+    let wakeLock = null;
+    async function activarWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {}
+    }
+    activarWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') activarWakeLock();
+    });
+
     const socket = io();
     let miJugador = null;
     let yaRespondio = false;
@@ -337,6 +339,7 @@
         const nombre = document.getElementById('in-name').value.trim();
         if (!nombre) return alert('Escribe tu nombre');
         socket.emit('jugador_unirse', { nombre, color: b.dataset.color });
+        activarWakeLock();
       });
     });
 
@@ -432,7 +435,7 @@
       }
     });
 
-    // Ronda activa
+    // DUELO ACTIVO
     socket.on('tu_turno_responder', ({ tipo }) => {
       clearTimeout(timerOcultarPantalla);
 
@@ -455,8 +458,7 @@
       if (isAprox) {
         inYearNum.disabled = false;
         document.getElementById('btn-send-year').disabled = false;
-        // TOTALMENTE VACÍO (SIN NINGÚN NÚMERO PREDETERMINADO)
-        inYearNum.value = '';
+        inYearNum.value = ''; // Inicia totalmente vacío
         setTimeout(() => inYearNum.focus(), 250);
       } else {
         document.querySelectorAll('.btn-opt').forEach(b => {
@@ -475,7 +477,7 @@
     document.getElementById('btn-send-year').addEventListener('click', () => {
       if (yaRespondio) return;
       const val = inYearNum.value.trim();
-      if (val === '') return alert('Por favor escribe un número antes de enviar.');
+      if (val === '') return alert('Escribe un número antes de enviar');
       yaRespondio = true;
       socket.emit('enviar_respuesta', { opcion: val });
 
@@ -502,7 +504,6 @@
       document.getElementById('btn-loro').disabled = true;
     });
 
-    // Martillo
     document.getElementById('btn-martillo').addEventListener('click', () => {
       if (!yaRespondio) socket.emit('usar_martillo');
     });
@@ -514,7 +515,6 @@
       });
     });
 
-    // Loro
     document.getElementById('btn-loro').addEventListener('click', () => {
       if (!yaRespondio) socket.emit('usar_loro');
     });
@@ -529,20 +529,21 @@
       parrotBox.style.display = 'block';
     });
 
-    document.getElementById('btn-pasar').addEventListener('click', () => {
-      if (confirm('¿Deseas omitir tu ataque y pasar el turno al siguiente jugador?')) {
-        socket.emit('pasar_turno');
-      }
+    socket.on('juego_cancelado_por_host', () => {
+      clearTimeout(timerOcultarPantalla);
+      screenBattle.classList.add('hidden');
+      playerTimeBox.classList.add('hidden');
+      screenWait.classList.remove('hidden');
+      txtStatus.textContent = 'El Host ha cancelado el combate.';
     });
 
-    // Fin de Duelo
     socket.on('fin_duelo', (res) => {
       if (res.ganador) {
         const soyGanador = res.ganador.id === socket.id;
         txtStatus.textContent = soyGanador ? '🎉 ¡GANASTE EL COMBATE!' : '💀 PERDISTE EL COMBATE';
         txtStatus.style.color = soyGanador ? '#2dc653' : '#e63946';
       } else if (res.requiereDesempate) {
-        txtStatus.textContent = '⚖️ ¡EMPATE! Pasando a desempate de AÑOS...';
+        txtStatus.textContent = '⚖️ ¡EMPATE! Pasando a desempate por Diana...';
         txtStatus.style.color = '#ffb703';
       }
 
