@@ -5,25 +5,7 @@ const https = require('https');
 const dbPath = path.join(__dirname, 'database', 'preguntas.db');
 const db = new sqlite3.Database(dbPath);
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS preguntas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tipo TEXT DEFAULT 'opcion_multiple',
-      categoria TEXT NOT NULL,
-      pregunta TEXT NOT NULL UNIQUE,
-      opcion_a TEXT,
-      opcion_b TEXT,
-      opcion_c TEXT,
-      opcion_d TEXT,
-      correcta TEXT NOT NULL,
-      anio_min INTEGER DEFAULT 1000,
-      anio_max INTEGER DEFAULT 2026
-    )
-  `);
-});
-
-// Función de traducción universal
+// Traductor universal de Google
 function traducir(texto, de = 'auto', a = 'es') {
   return new Promise((resolve) => {
     if (!texto) return resolve('');
@@ -45,22 +27,64 @@ function traducir(texto, de = 'auto', a = 'es') {
 
 function decodificarHTML(t) {
   if (!t) return '';
-  return t.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  return t
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
 }
 
-// Combina el texto en inglés y español entre paréntesis
+// Español principal, inglés en paréntesis secundario
 function combinarBilingue(es, en) {
   if (!es || !en) return es || en || '';
   if (es.trim().toLowerCase() === en.trim().toLowerCase()) return es;
-  return `${es} (${en})`; // Español principal, inglés entre paréntesis
+  return `${es} (${en})`;
 }
 
-function guardarPreguntaEnDB(tipo, categoria, pregunta, a, b, c, d, correcta) {
-  const sql = `
-    INSERT OR IGNORE INTO preguntas (tipo, categoria, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  db.run(sql, [tipo, categoria, pregunta, a, b, c, d, correcta]);
+// Categorías estrictamente de CULTURA GENERAL UNIVERSAL
+const CATEGORIAS_API = {
+  general: 9,      // Conocimiento general
+  ciencia: 17,     // Ciencia y naturaleza
+  deportes: 21,    // Deportes
+  geografia: 22,   // Geografía
+  historia: 23,    // Historia
+  arte: 25         // Arte
+};
+
+function consultarAPIExterna(catKey) {
+  return new Promise((resolve) => {
+    const idCat = CATEGORIAS_API[catKey] || CATEGORIAS_API.general;
+    // &difficulty=easy garantiza preguntas elementales conocidas
+    const url = `https://opentdb.com/api.php?amount=1&type=multiple&category=${idCat}&difficulty=easy`;
+
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.response_code === 0 && json.results && json.results.length > 0) {
+            const item = json.results[0];
+            const incorrectas = item.incorrect_answers.map(decodificarHTML);
+            const correcta = decodificarHTML(item.correct_answer);
+            const todas = [...incorrectas, correcta].sort(() => 0.5 - Math.random());
+            const letras = ['A', 'B', 'C', 'D'];
+
+            resolve({
+              pregunta: decodificarHTML(item.question),
+              opciones: { A: todas[0], B: todas[1], C: todas[2], D: todas[3] },
+              correcta: letras[todas.indexOf(correcta)]
+            });
+          } else {
+            resolve(null);
+          }
+        } catch {
+          resolve(null);
+        }
+      });
+    }).on('error', () => resolve(null));
+  });
 }
 
 function consultarBaseLocal(tipo, categoria, idsExcluidos = []) {
@@ -112,65 +136,21 @@ function formatear(row) {
   };
 }
 
-const CATEGORIAS_API = {
-  historia: 23,
-  cine: 11,
-  deportes: 21,
-  ciencia: 17,
-  geografia: 22,
-  videojuegos: 15,
-  musica: 12,
-  arte: 25
-};
-
-function consultarAPIExterna(catKey) {
-  return new Promise((resolve) => {
-    let url = 'https://opentdb.com/api.php?amount=1&type=multiple';
-    if (catKey && CATEGORIAS_API[catKey]) {
-      url += `&category=${CATEGORIAS_API[catKey]}`;
-    }
-
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          if (json.response_code === 0 && json.results.length > 0) {
-            const item = json.results[0];
-            const incorrectas = item.incorrect_answers.map(decodificarHTML);
-            const correcta = decodificarHTML(item.correct_answer);
-            const todas = [...incorrectas, correcta].sort(() => 0.5 - Math.random());
-            const letras = ['A', 'B', 'C', 'D'];
-
-            resolve({
-              pregunta: decodificarHTML(item.question),
-              opciones: { A: todas[0], B: todas[1], C: todas[2], D: todas[3] },
-              correcta: letras[todas.indexOf(correcta)]
-            });
-          } else resolve(null);
-        } catch { resolve(null); }
-      });
-    }).on('error', () => resolve(null));
-  });
-}
-
 async function obtenerPregunta(categoria = 'aleatorio', esDesempate = false, idsExcluidos = []) {
-  // 1. Desempate por aproximación (Años)
+  // 1. Desempate por año (aproximación)
   if (esDesempate) {
     const pLocal = await consultarBaseLocal('aproximacion', null, idsExcluidos);
     if (pLocal) {
-      // Traducir pregunta al inglés para formato bilingüe
       const pregEn = await traducir(pLocal.pregunta, 'es', 'en');
       return {
         ...pLocal,
-        pregunta: `${pregEn}\n(${pLocal.pregunta})`
+        pregunta: `${pLocal.pregunta}\n(${pregEn})`
       };
     }
     return pLocal;
   }
 
-  // 2. Cultura Peruana (origen español -> traduce inglés y combina)
+  // 2. Cultura Peruana (siempre de nuestra base local en español)
   if (categoria === 'cultura_peruana') {
     const pLocal = await consultarBaseLocal('opcion_multiple', 'cultura_peruana', idsExcluidos);
     if (pLocal) {
@@ -184,7 +164,7 @@ async function obtenerPregunta(categoria = 'aleatorio', esDesempate = false, ids
 
       return {
         ...pLocal,
-       pregunta: `${pLocal.pregunta}\n(${pregEn})`,
+        pregunta: `${pLocal.pregunta}\n(${pregEn})`,
         opciones: {
           A: combinarBilingue(pLocal.opciones.A, opAEn),
           B: combinarBilingue(pLocal.opciones.B, opBEn),
@@ -196,7 +176,7 @@ async function obtenerPregunta(categoria = 'aleatorio', esDesempate = false, ids
     return pLocal;
   }
 
-  // 3. API Externa (origen inglés -> traduce español y combina)
+  // 3. API Externa (Cultura general de fácil acceso, español arriba e inglés abajo)
   try {
     const raw = await consultarAPIExterna(categoria);
     if (raw) {
@@ -215,8 +195,6 @@ async function obtenerPregunta(categoria = 'aleatorio', esDesempate = false, ids
         C: combinarBilingue(opCEs, raw.opciones.C),
         D: combinarBilingue(opDEs, raw.opciones.D)
       };
-
-      guardarPreguntaEnDB('opcion_multiple', categoria, pregFinal, opcionesFinal.A, opcionesFinal.B, opcionesFinal.C, opcionesFinal.D, raw.correcta);
 
       return {
         id: 'api_' + Date.now(),
