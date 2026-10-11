@@ -284,15 +284,17 @@
 
     <!-- Desempate por Años -->
     <div class="year-box hidden" id="box-year-input">
-      <span style="color:#cbd5e1; font-weight:bold;">Escribe o ajusta el Año:</span>
-      <input type="number" id="in-year-num" placeholder="1900">
+      <span style="color:#cbd5e1; font-weight:bold; font-size:1.1rem;">Escribe tu número aproximado:</span>
+      <!-- INICIA TOTALMENTE VACÍO -->
+      <input type="number" id="in-year-num" placeholder="Escribe aquí..." inputmode="numeric">
+      
       <div class="year-stepper">
-        <button type="button" onclick="ajustarAnio(-10)">-10</button>
-        <button type="button" onclick="ajustarAnio(-1)">-1</button>
-        <button type="button" onclick="ajustarAnio(+1)">+1</button>
-        <button type="button" onclick="ajustarAnio(+10)">+10</button>
+        <button type="button" onclick="ajustarNumero(-10)">-10</button>
+        <button type="button" onclick="ajustarNumero(-1)">-1</button>
+        <button type="button" onclick="ajustarNumero(+1)">+1</button>
+        <button type="button" onclick="ajustarNumero(+10)">+10</button>
       </div>
-      <button class="btn-send-year" id="btn-send-year">ENVIAR AÑO</button>
+      <button class="btn-send-year" id="btn-send-year">ENVIAR NÚMERO</button>
     </div>
 
     <!-- Mensaje tras responder (oculta las opciones y evita clics dobles) -->
@@ -431,7 +433,7 @@
     });
 
     // Ronda activa
-    socket.on('tu_turno_responder', ({ tipo, anioMin, anioMax }) => {
+    socket.on('tu_turno_responder', ({ tipo }) => {
       clearTimeout(timerOcultarPantalla);
 
       yaRespondio = false;
@@ -453,7 +455,8 @@
       if (isAprox) {
         inYearNum.disabled = false;
         document.getElementById('btn-send-year').disabled = false;
-        inYearNum.value = Math.floor(((anioMin || 1800) + (anioMax || 2020)) / 2);
+        // TOTALMENTE VACÍO (SIN NINGÚN NÚMERO PREDETERMINADO)
+        inYearNum.value = '';
         setTimeout(() => inYearNum.focus(), 250);
       } else {
         document.querySelectorAll('.btn-opt').forEach(b => {
@@ -463,16 +466,16 @@
       }
     });
 
-    window.ajustarAnio = function(delta) {
+    window.ajustarNumero = function(delta) {
       if (yaRespondio) return;
-      let val = parseInt(inYearNum.value) || 1900;
+      let val = inYearNum.value === '' ? 0 : parseInt(inYearNum.value);
       inYearNum.value = val + delta;
     };
 
     document.getElementById('btn-send-year').addEventListener('click', () => {
       if (yaRespondio) return;
       const val = inYearNum.value.trim();
-      if (!val) return alert('Escribe un año válido');
+      if (val === '') return alert('Por favor escribe un número antes de enviar.');
       yaRespondio = true;
       socket.emit('enviar_respuesta', { opcion: val });
 

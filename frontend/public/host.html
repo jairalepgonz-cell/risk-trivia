@@ -368,6 +368,7 @@
       }
 
       if (res.tipo === 'aproximacion') {
+        // Revela el número exacto en el centro de la diana
         document.getElementById('target-exact-val').textContent = res.correcta;
 
         const at = res.atacante;
@@ -387,8 +388,10 @@
         document.getElementById('val-guess-def').textContent = def.resp !== null ? def.resp : 'Sin resp.';
         document.getElementById('time-guess-def').textContent = def.tiempoMs ? `${(def.tiempoMs/1000).toFixed(2)}s` : '-';
 
-        posicionarFlecha('at', at.diff, at.color, 280, 100);
-        posicionarFlecha('def', def.diff, def.color, 320, 500);
+        // Posiciona las flechas según la diferencia
+        posicionarFlecha('at', at.diff, at.color, 280, 100, res.correcta);
+        posicionarFlecha('def', def.diff, def.color, 320, 500, res.correcta);
+
       } else {
         if (res.atacante.resp && res.defensor.resp && res.atacante.resp === res.defensor.resp) {
           const el = document.getElementById(`box-${res.atacante.resp}`);
@@ -409,7 +412,7 @@
       }
     });
 
-    function posicionarFlecha(lado, diff, color, targetX, startX) {
+    function posicionarFlecha(lado, diff, color, targetX, startX, correcta) {
       const g = document.getElementById(`arrow-${lado}`);
       const line = document.getElementById(`line-arrow-${lado}`);
       const head = document.getElementById(`head-arrow-${lado}`);
@@ -419,11 +422,15 @@
         return;
       }
 
+      // Si acertó exactamente al centro (diferencia 0)
       let offset = 0;
-      if (diff === 0) offset = 0;
-      else if (diff <= 5) offset = 40;
-      else if (diff <= 15) offset = 90;
-      else offset = 140;
+      if (diff === 0) {
+        offset = 0; // Clavado en el centro
+      } else {
+        // Escala proporcional: si está cerca queda en los aros interiores, si está lejos en los exteriores
+        const ratio = Math.min(diff / Math.max(correcta * 0.2, 5), 1);
+        offset = Math.round(35 + (ratio * 110));
+      }
 
       const hitX = (lado === 'at') ? (300 - offset) : (300 + offset);
 
