@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración y Parametrización - Triviador Mundo & Perú</title>
+  <style>
+    :root {
+      --bg: #080d1a;
+      --card: #111927;
+      --border: #26354d;
+      --gold: #ffb703;
+      --red: #e63946;
+      --blue: #3a86ff;
+      --green: #2a9d8f;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    .hidden { display: none !important; }
+
+    header {
+      background: #0d1424;
+      border-bottom: 2px solid var(--border);
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .header-title { font-size: 1.35rem; font-weight: 900; color: var(--gold); display: flex; align-items: center; gap: 0.6rem; }
+    .nav-links { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .btn {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 0.5rem 0.95rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn:hover { border-color: var(--gold); background: #283548; }
+    .btn.primary { background: var(--green); border-color: var(--green); }
+    .btn.gold { background: var(--gold); color: #000; border-color: var(--gold); }
+    .btn.danger { background: var(--red); border-color: var(--red); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      flex: 1;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .sidebar {
+      background: #0c1322;
+      border-right: 1px solid var(--border);
+      padding: 1rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .tab-btn {
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .tab-btn:hover { background: #162032; color: #fff; }
+    .tab-btn.active { background: linear-gradient(90deg, #1e293b, #162032); color: var(--gold); border-left: 4px solid var(--gold); }
+
+    .content { padding: 1.4rem; overflow-x: auto; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.4rem;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem;
+    }
+    .kpi-val { font-size: 2rem; font-weight: 900; color: var(--gold); margin-top: 0.25rem; }
+    .kpi-lbl { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+
+    .panel-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      margin-bottom: 1.2rem;
+    }
+    .panel-box h3 { color: var(--gold); margin-bottom: 0.9rem; font-size: 1.15rem; }
+
+    .filters-bar {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    input, select, textarea {
+      background: #0b111e;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 0.55rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid #1e293b;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--gold); background: #0c1322; position: sticky; top: 0; }
+    tr:hover { background: rgba(255,255,255,0.03); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .badge.peru { background: rgba(230, 57, 70, 0.2); color: #ff6b6b; border: 1px solid #e63946; }
+    .badge.mundo { background: rgba(58, 134, 255, 0.2); color: #60a5fa; border: 1px solid #3a86ff; }
+    .badge.basico { background: rgba(42, 157, 143, 0.2); color: #34d399; }
+    .badge.intermedio { background: rgba(255, 183, 3, 0.2); color: #fbbf24; }
+    .badge.avanzado { background: rgba(230, 57, 70, 0.25); color: #f87171; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.9rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .form-group label { font-size: 0.82rem; color: var(--gold); font-weight: 700; }
+
+    .comodines-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1rem;
+    }
+    .comodin-cfg-card {
+      background: #0c1322;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--green);
+      color: #fff;
+      padding: 0.8rem 1.4rem;
+      border-radius: 10px;
+      font-weight: 800;
+      display: none;
+      z-index: 300;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast"></div>
+
+  <header>
+    <div class="header-title">
+      <span>⚙️🌍🇵🇪</span>
+      <span>CENTRO DE ADMINISTRACIÓN Y PARAMETRIZACIÓN — TRIVIADOR MUNDO & PERÚ</span>
+    </div>
+    <div class="nav-links">
+      <a href="/host.html" class="btn gold">📺 Ir a Mesa Host / Mapa</a>
+      <a href="/player.html" class="btn">📱 Vista Móvil Jugador</a>
+      <button class="btn primary" onclick="cargarDashboard()">🔄 Actualizar Datos</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="tab-btn active" data-tab="tab-dashboard">📊 Resumen y Auditoría</button>
+      <button class="tab-btn" data-tab="tab-preguntas">📚 Banco de Preguntas</button>
+      <button class="tab-btn" data-tab="tab-categorias">🎡 Categorías TV</button>
+      <button class="tab-btn" data-tab="tab-comodines">✨ Comodines (14)</button>
+      <button class="tab-btn" data-tab="tab-reglas">⚖️ Reglas y Equilibrio</button>
+      <button class="tab-btn" data-tab="tab-jugadores">🏆 Jugadores e Historial</button>
+    </aside>
+
+    <main class="content">
+      <!-- TAB 1: DASHBOARD Y AUDITORÍA -->
+      <section id="tab-dashboard">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-lbl">🇵🇪 Banco Independiente Perú</div>
+            <div class="kpi-val" id="kpi-peru">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">🌍 Banco Independiente Mundo</div>
+            <div class="kpi-val" id="kpi-mundo">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">📚 Total Preguntas Activas</div>
+            <div class="kpi-val" id="kpi-total">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">🎡 Categorías Configuradas</div>
+            <div class="kpi-val" id="kpi-cats">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">✨ Comodines Parametrizados</div>
+            <div class="kpi-val" id="kpi-coms">0</div>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem;">
+            <h3>🛡️ Auditoría de Calidad: Detección de Duplicados y Validación de Respuestas</h3>
+            <button class="btn gold" onclick="ejecutarAuditoriaCalidad()">🔍 Ejecutar Auditoría de Bancos</button>
+          </div>
+          <div id="auditoria-result" style="margin-top:0.8rem; color:#cbd5e1; font-size:0.92rem;">
+            Haz clic en "Ejecutar Auditoría de Bancos" para verificar unicidad, alternativas completas y respuestas válidas en ambos bancos.
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="panel-box">
+            <h3>🇵🇪 Distribución por Dificultad (Perú)</h3>
+            <div id="dist-dif-peru"></div>
+          </div>
+          <div class="panel-box">
+            <h3>🌍 Distribución por Dificultad (Mundo)</h3>
+            <div id="dist-dif-mundo"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: GESTIÓN DE PREGUNTAS (PERÚ Y MUNDO) -->
+      <section id="tab-preguntas" class="hidden">
+        <div class="panel-box">
+          <h3>➕ Crear o Editar Pregunta Verificada</h3>
+          <input type="hidden" id="q-id">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Banco de Destino:</label>
+              <select id="q-banco">
+                <option value="peru">🇵🇪 Banco Especializado del Perú</option>
+                <option value="mundo">🌍 Banco de Conocimiento Mundial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tipo de Pregunta:</label>
+              <select id="q-tipo">
+                <option value="opcion_multiple">Opción Múltiple (4 alternativas)</option>
+                <option value="aproximacion">Aproximación Numérica (Diana)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Categoría:</label>
+              <select id="q-categoria"></select>
+            </div>
+            <div class="form-group">
+              <label>Subcategoría:</label>
+              <input type="text" id="q-subcategoria" placeholder="Ej: Imperio Incaico / Física">
+            </div>
+            <div class="form-group">
+              <label>Nivel de Dificultad:</label>
+              <select id="q-dificultad">
+                <option value="basico">Básico</option>
+                <option value="intermedio">Intermedio</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>País o Región de Referencia:</label>
+              <input type="text" id="q-ref" placeholder="Ej: Cusco / Mundial">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:0.8rem;">
+            <label>Enunciado de la Pregunta:</label>
+            <input type="text" id="q-pregunta" placeholder="Escribe aquí la pregunta única y verificada...">
+          </div>
+
+          <div class="form-grid" style="margin-top:0.8rem;" id="q-options-group">
+            <div class="form-group"><label>Alternativa A:</label><input type="text" id="q-op-a"></div>
+            <div class="form-group"><label>Alternativa B:</label><input type="text" id="q-op-b"></div>
+            <div class="form-group"><label>Alternativa C:</label><input type="text" id="q-op-c"></div>
+            <div class="form-group"><label>Alternativa D:</label><input type="text" id="q-op-d"></div>
+          </div>
+
+          <div class="form-grid" style="margin-top:0.8rem;">
+            <div class="form-group">
+              <label>Respuesta Correcta (A, B, C, D o Número Exacto):</label>
+              <input type="text" id="q-correcta" value="A">
+            </div>
+            <div class="form-group">
+              <label>Fuente de Verificación:</label>
+              <input type="text" id="q-fuente" value="Archivo Histórico / UNESCO">
+            </div>
+            <div class="form-group">
+              <label>Explicación de la Respuesta Correcta:</label>
+              <input type="text" id="q-explicacion" placeholder="Breve explicación didáctica verificada...">
+            </div>
+          </div>
+
+          <div style="margin-top:1rem; display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button class="btn primary" onclick="guardarPreguntaForm()">💾 Guardar Pregunta</button>
+            <button class="btn" onclick="limpiarFormularioPregunta()">🧹 Limpiar Formulario</button>
+            <a href="/api/admin/preguntas/exportar?banco=peru" target="_blank" class="btn">⬇️ Exportar JSON Perú</a>
+            <a href="/api/admin/preguntas/exportar?banco=mundo" target="_blank" class="btn">⬇️ Exportar JSON Mundo</a>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <h3>🔎 Explorador de Bancos de Preguntas</h3>
+          <div class="filters-bar">
+            <select id="f-banco" onchange="cargarListaPreguntas()">
+              <option value="todos">Todos los Bancos (Perú + Mundo)</option>
+              <option value="peru">🇵🇪 Solo Banco Perú</option>
+              <option value="mundo">🌍 Solo Banco Mundo</option>
+            </select>
+            <select id="f-dificultad" onchange="cargarListaPreguntas()">
+              <option value="">Todas las Dificultades</option>
+              <option value="basico">Básico</option>
+              <option value="intermedio">Intermedio</option>
+              <option value="avanzado">Avanzado</option>
+            </select>
+            <input type="text" id="f-busqueda" placeholder="Buscar por texto o código..." oninput="cargarListaPreguntas()">
+            <button class="btn" onclick="cargarListaPreguntas()">Buscar</button>
+          </div>
+
+          <div style="max-height: 480px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Banco</th>
+                  <th>Categoría / Nivel</th>
+                  <th>Pregunta y Alternativas</th>
+                  <th>Correcta</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-preguntas"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CATEGORÍAS -->
+      <section id="tab-categorias" class="hidden">
+        <div class="panel-box">
+          <h3>➕ Crear Nueva Categoría (Perú, Mundo o Especial TV)</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Nombre:</label><input type="text" id="cat-nombre" placeholder="Ej: Mitología Andina"></div>
+            <div class="form-group">
+              <label>Ámbito:</label>
+              <select id="cat-ambito">
+                <option value="peru">🇵🇪 Exclusiva de Perú</option>
+                <option value="mundo">🌍 Internacional / Mundo</option>
+                <option value="especial">🎡 Especial de Televisión</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Icono:</label><input type="text" id="cat-icono" value="🎯"></div>
+            <div class="form-group"><label>Probabilidad (1-100):</label><input type="number" id="cat-prob" value="100" min="1" max="100"></div>
+          </div>
+          <button class="btn primary" style="margin-top:0.8rem;" onclick="crearCategoriaAdmin()">➕ Agregar Categoría</button>
+        </div>
+
+        <div class="panel-box">
+          <h3>🎡 Catálogo de Categorías (53 Categorías Activas)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Icono / Código</th>
+                <th>Nombre</th>
+                <th>Ámbito</th>
+                <th>Probabilidad</th>
+                <th>Especial TV</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-categorias"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: COMODINES -->
+      <section id="tab-comodines" class="hidden">
+        <div class="panel-box">
+          <h3>✨ Parametrización del Catálogo de Comodines (14 Comodines Triviador)</h3>
+          <p style="color:var(--muted); margin-bottom:1rem; font-size:0.9rem;">
+            Ajusta la cantidad inicial por jugador, límite máximo, costo en monedas, estado activo y efectos de cada comodín. Los cambios se sincronizan en tiempo real con la partida.
+          </p>
+          <div class="comodines-cards-grid" id="grid-admin-comodines"></div>
+        </div>
+      </section>
+
+      <!-- TAB 5: REGLAS DEL JUEGO Y EQUILIBRIO -->
+      <section id="tab-reglas" class="hidden">
+        <div class="panel-box">
+          <h3>⚖️ Parámetros de Reglas, Combate Territorial y Equilibrio</h3>
+          <div class="form-grid" id="form-reglas-container"></div>
+          <button class="btn gold" style="margin-top:1.2rem;" onclick="guardarReglasAdmin()">💾 Guardar y Aplicar Todas las Reglas en Vivo</button>
+        </div>
+      </section>
+
+      <!-- TAB 6: JUGADORES E HISTORIAL -->
+      <section id="tab-jugadores" class="hidden">
+        <div class="panel-box">
+          <h3>🏆 Ranking Histórico de Comandantes</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Comandante</th>
+                <th>Color Preferido</th>
+                <th>Puntos Totales</th>
+                <th>Preguntas (Aciertos / Total)</th>
+                <th>Territorios Conquistados</th>
+                <th>Defensas Exitosas</th>
+                <th>Comodines Usados</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-jugadores"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-box">
+          <h3>⚔️ Historial de Combates Recientes</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Atacante</th>
+                <th>Defensor</th>
+                <th>Territorio Objetivo</th>
+                <th>Categoría / Banco</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-combates"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let cacheCategorias = [];
+    let cacheConfiguraciones = [];
+
+    // Navegación por pestañas
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+
+        if (btn.dataset.tab === 'tab-preguntas') cargarListaPreguntas();
+      });
+    });
+
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3200);
+    }
+
+    async function cargarDashboard() {
+      const res = await fetch('/api/admin/dashboard');
+      const data = await res.json();
+      if (!data.exito) return;
+
+      document.getElementById('kpi-peru').textContent = data.totales.preguntasPeru;
+      document.getElementById('kpi-mundo').textContent = data.totales.preguntasMundo;
+      document.getElementById('kpi-total').textContent = data.totales.totalPreguntas;
+      document.getElementById('kpi-cats').textContent = data.totales.totalCategorias;
+      document.getElementById('kpi-coms').textContent = data.totales.totalComodines;
+
+      // Distribución por dificultad
+      document.getElementById('dist-dif-peru').innerHTML = (data.porDificultadPeru || []).map(d =>
+        `<div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid #1e293b;">
+          <span class="badge ${d.dificultad}">${d.dificultad}</span>
+          <strong>${d.total} preguntas</strong>
+        </div>`
+      ).join('');
+
+      document.getElementById('dist-dif-mundo').innerHTML = (data.porDificultadMundo || []).map(d =>
+        `<div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid #1e293b;">
+          <span class="badge ${d.dificultad}">${d.dificultad}</span>
+          <strong>${d.total} preguntas</strong>
+        </div>`
+      ).join('');
+
+      cacheCategorias = data.categorias || [];
+      cacheConfiguraciones = data.configuraciones || [];
+
+      renderizarSelectCategorias();
+      renderizarTablaCategorias(cacheCategorias);
+      renderizarComodinesAdmin(data.comodines || []);
+      renderizarReglasAdmin(cacheConfiguraciones);
+      renderizarJugadoresYCombates(data.jugadores || [], data.combatesRecientes || []);
+    }
+
+    async function ejecutarAuditoriaCalidad() {
+      const res = await fetch('/api/admin/preguntas/auditoria');
+      const rep = await res.json();
+      const box = document.getElementById('auditoria-result');
+      box.innerHTML = `
+        <div style="background:#0b111e; padding:0.9rem; border-radius:8px; border-left:4px solid #2a9d8f;">
+          <strong>✅ Resultado de Auditoría de Integridad:</strong><br>
+          • Preguntas Verificadas en Banco Perú: <strong>${rep.totalPeru}</strong><br>
+          • Preguntas Verificadas en Banco Mundo: <strong>${rep.totalMundo}</strong><br>
+          • Duplicados detectados: <strong>${rep.duplicadosEncontrados}</strong><br>
+          • Errores de validación de alternativas/respuestas: <strong>${rep.erroresValidacionEncontrados}</strong>
+        </div>
+      `;
+      mostrarToast('🔍 Auditoría completada con éxito.');
+    }
+
+    function renderizarSelectCategorias() {
+      const sel = document.getElementById('q-categoria');
+      sel.innerHTML = cacheCategorias.map(c =>
+        `<option value="${c.codigo}">${c.icono || '🎯'} [${c.ambito.toUpperCase()}] ${c.nombre}</option>`
+      ).join('');
+    }
+
+    async function cargarListaPreguntas() {
+      const banco = document.getElementById('f-banco').value;
+      const dificultad = document.getElementById('f-dificultad').value;
+      const busqueda = document.getElementById('f-busqueda').value;
+
+      const qs = new URLSearchParams({ banco, dificultad, busqueda, limite: 120 });
+      const res = await fetch(`/api/admin/preguntas?${qs.toString()}`);
+      const data = await res.json();
+      const tbody = document.getElementById('tbody-preguntas');
+
+      tbody.innerHTML = (data.preguntas || []).map(p => `
+        <tr>
+          <td><code>${p.codigoUnico}</code></td>
+          <td><span class="badge ${p.banco}">${p.banco === 'peru' ? '🇵🇪 PERÚ' : '🌍 MUNDO'}</span></td>
+          <td>
+            <div style="font-weight:700;">${p.categoria}</div>
+            <span class="badge ${p.dificultad}">${p.dificultad}</span>
+          </td>
+          <td>
+            <div style="font-weight:700; margin-bottom:0.25rem;">${p.pregunta}</div>
+            ${p.tipo === 'opcion_multiple'
+              ? `<div style="font-size:0.78rem; color:#94a3b8;">A) ${p.opciones.A} | B) ${p.opciones.B} | C) ${p.opciones.C} | D) ${p.opciones.D}</div>`
+              : `<div style="font-size:0.78rem; color:#fbbf24;">🎯 Aproximación Numérica (${p.anioMin} - ${p.anioMax})</div>`
+            }
+            ${p.explicacion ? `<div style="font-size:0.75rem; color:#38bdf8; margin-top:0.2rem;">💡 ${p.explicacion}</div>` : ''}
+          </td>
+          <td><strong style="color:var(--gold); font-size:1rem;">${p.correcta}</strong></td>
+          <td>
+            <button class="btn" style="padding:0.3rem 0.6rem; font-size:0.76rem;" onclick='editarPregunta(${JSON.stringify(p).replace(/'/g, "&#39;")})'>✏️ Editar</button>
+            <button class="btn danger" style="padding:0.3rem 0.6rem; font-size:0.76rem; margin-top:0.25rem;" onclick="eliminarPregunta('${p.banco}', ${p.id})">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.editarPregunta = function(p) {
+      document.getElementById('q-id').value = p.id;
+      document.getElementById('q-banco').value = p.banco;
+      document.getElementById('q-tipo').value = p.tipo;
+      document.getElementById('q-categoria').value = p.categoria;
+      document.getElementById('q-subcategoria').value = p.subcategoria || '';
+      document.getElementById('q-dificultad').value = p.dificultad;
+      document.getElementById('q-ref').value = p.referenciaGeografica || '';
+      document.getElementById('q-pregunta').value = p.pregunta;
+      document.getElementById('q-op-a').value = p.opciones?.A || '';
+      document.getElementById('q-op-b').value = p.opciones?.B || '';
+      document.getElementById('q-op-c').value = p.opciones?.C || '';
+      document.getElementById('q-op-d').value = p.opciones?.D || '';
+      document.getElementById('q-correcta').value = p.correcta;
+      document.getElementById('q-fuente').value = p.fuente || '';
+      document.getElementById('q-explicacion').value = p.explicacion || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.limpiarFormularioPregunta = function() {
+      document.getElementById('q-id').value = '';
+      document.getElementById('q-pregunta').value = '';
+      document.getElementById('q-op-a').value = '';
+      document.getElementById('q-op-b').value = '';
+      document.getElementById('q-op-c').value = '';
+      document.getElementById('q-op-d').value = '';
+      document.getElementById('q-explicacion').value = '';
+    };
+
+    window.guardarPreguntaForm = async function() {
+      const payload = {
+        id: document.getElementById('q-id').value || null,
+        banco: document.getElementById('q-banco').value,
+        tipo: document.getElementById('q-tipo').value,
+        categoria: document.getElementById('q-categoria').value,
+        subcategoria: document.getElementById('q-subcategoria').value,
+        dificultad: document.getElementById('q-dificultad').value,
+        referenciaGeografica: document.getElementById('q-ref').value,
+        pregunta: document.getElementById('q-pregunta').value,
+        opcion_a: document.getElementById('q-op-a').value,
+        opcion_b: document.getElementById('q-op-b').value,
+        opcion_c: document.getElementById('q-op-c').value,
+        opcion_d: document.getElementById('q-op-d').value,
+        correcta: document.getElementById('q-correcta').value,
+        fuente: document.getElementById('q-fuente').value,
+        explicacion: document.getElementById('q-explicacion').value
+      };
+
+      const res = await fetch('/api/admin/preguntas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.exito) return alert(data.error || 'Error al guardar pregunta');
+
+      mostrarToast('✅ Pregunta guardada y sincronizada en el banco.');
+      limpiarFormularioPregunta();
+      cargarListaPreguntas();
+      cargarDashboard();
+    };
+
+    window.eliminarPregunta = async function(banco, id) {
+      if (!confirm('¿Eliminar esta pregunta del banco?')) return;
+      await fetch(`/api/admin/preguntas/${banco}/${id}?accion=eliminar`, { method: 'DELETE' });
+      mostrarToast('🗑️ Pregunta eliminada.');
+      cargarListaPreguntas();
+      cargarDashboard();
+    };
+
+    function renderizarTablaCategorias(cats) {
+      const tbody = document.getElementById('tbody-categorias');
+      tbody.innerHTML = cats.map(c => `
+        <tr>
+          <td><span style="font-size:1.2rem;">${c.icono}</span> <code>${c.codigo}</code></td>
+          <td><strong>${c.nombre}</strong><br><small style="color:#94a3b8;">${c.descripcion || ''}</small></td>
+          <td><span class="badge ${c.ambito === 'peru' ? 'peru' : 'mundo'}">${c.ambito}</span></td>
+          <td>${c.probabilidad}%</td>
+          <td>${c.es_especial ? '🌟 Sí' : 'No'}</td>
+          <td>${c.activa ? '✅ Activa' : '⏸️ Inactiva'}</td>
+        </tr>
+      `).join('');
+    }
+
+    window.crearCategoriaAdmin = async function() {
+      const nombre = document.getElementById('cat-nombre').value.trim();
+      if (!nombre) return alert('Escribe el nombre de la categoría');
+      const ambito = document.getElementById('cat-ambito').value;
+      const icono = document.getElementById('cat-icono').value;
+      const probabilidad = document.getElementById('cat-prob').value;
+
+      const res = await fetch('/api/admin/categorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, ambito, icono, probabilidad, es_especial: ambito === 'especial', activa: true })
+      });
+      const data = await res.json();
+      if (data.exito) {
+        mostrarToast('✅ Categoría creada.');
+        document.getElementById('cat-nombre').value = '';
+        cargarDashboard();
+      }
+    };
+
+    function renderizarComodinesAdmin(comodines) {
+      const grid = document.getElementById('grid-admin-comodines');
+      grid.innerHTML = comodines.map(c => `
+        <div class="comodin-cfg-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:var(--gold); font-size:1.05rem;">${c.icono} ${c.nombre}</strong>
+            <span class="badge basico">${c.tipo}</span>
+          </div>
+          <p style="font-size:0.82rem; color:#94a3b8;">${c.descripcion}</p>
+          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:0.5rem;">
+            <div class="form-group">
+              <label>Cant. Inicial:</label>
+              <input type="number" id="com-init-${c.codigo}" value="${c.cantidad_inicial}" min="0" max="10">
+            </div>
+            <div class="form-group">
+              <label>Límite Máx.:</label>
+              <input type="number" id="com-max-${c.codigo}" value="${c.limite_maximo}" min="1" max="15">
+            </div>
+            <div class="form-group">
+              <label>Costo Monedas:</label>
+              <input type="number" id="com-cost-${c.codigo}" value="${c.costo_monedas}" min="0" step="10">
+            </div>
+            <div class="form-group">
+              <label>Estado:</label>
+              <select id="com-act-${c.codigo}">
+                <option value="1" ${c.activo ? 'selected' : ''}>Activo</option>
+                <option value="0" ${!c.activo ? 'selected' : ''}>Inactivo</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn primary" style="margin-top:0.4rem;" onclick='guardarComodinIndividual(${JSON.stringify(c).replace(/'/g, "&#39;")})'>
+            💾 Actualizar ${c.nombre}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    window.guardarComodinIndividual = async function(c) {
+      const payload = {
+        ...c,
+        cantidad_inicial: document.getElementById(`com-init-${c.codigo}`).value,
+        limite_maximo: document.getElementById(`com-max-${c.codigo}`).value,
+        costo_monedas: document.getElementById(`com-cost-${c.codigo}`).value,
+        activo: document.getElementById(`com-act-${c.codigo}`).value === '1'
+      };
+      const res = await fetch('/api/admin/comodines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.exito) {
+        mostrarToast(`✨ Comodín "${c.nombre}" actualizado en vivo.`);
+      }
+    };
+
+    function renderizarReglasAdmin(configs) {
+      const container = document.getElementById('form-reglas-container');
+      container.innerHTML = configs.map(cfg => `
+        <div class="form-group" style="background:#0c1322; padding:0.75rem; border-radius:8px; border:1px solid #1e293b;">
+          <label>${cfg.clave}</label>
+          <input type="text" data-cfg-key="${cfg.clave}" value="${cfg.valor}">
+          <small style="color:#64748b; font-size:0.76rem;">${cfg.descripcion || ''}</small>
+        </div>
+      `).join('');
+    }
+
+    window.guardarReglasAdmin = async function() {
+      const body = {};
+      document.querySelectorAll('[data-cfg-key]').forEach(inp => {
+        body[inp.dataset.cfgKey] = inp.value;
+      });
+      const res = await fetch('/api/admin/configuraciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.exito) {
+        mostrarToast('⚖️ Reglas guardadas y sincronizadas con la partida en vivo.');
+      }
+    };
+
+    function renderizarJugadoresYCombates(jugadores, combates) {
+      const tbJug = document.getElementById('tbody-jugadores');
+      tbJug.innerHTML = jugadores.length === 0
+        ? '<tr><td colspan="7" style="color:#64748b;">Aún no hay comandantes registrados en el historial.</td></tr>'
+        : jugadores.map(j => {
+            const pct = j.preguntas_respondidas > 0 ? Math.round((j.preguntas_acertadas / j.preguntas_respondidas) * 100) : 0;
+            return `
+              <tr>
+                <td><strong>${j.nombre}</strong></td>
+                <td>${(j.color_preferido || 'rojo').toUpperCase()}</td>
+                <td><strong style="color:var(--gold);">${j.puntos_totales} pts</strong></td>
+                <td>${j.preguntas_acertadas} / ${j.preguntas_respondidas} (${pct}%)</td>
+                <td>🏳️ ${j.territorios_conquistados}</td>
+                <td>🛡️ ${j.defensas_exitosas}</td>
+                <td>✨ ${j.comodines_utilizados}</td>
+              </tr>
+            `;
+          }).join('');
+
+      const tbComb = document.getElementById('tbody-combates');
+      tbComb.innerHTML = combates.length === 0
+        ? '<tr><td colspan="6" style="color:#64748b;">Aún no se han registrado combates.</td></tr>'
+        : combates.map(c => `
+            <tr>
+              <td><small>${c.fecha}</small></td>
+              <td><strong>${c.atacante_nombre}</strong> (${c.atacante_color})</td>
+              <td><strong>${c.defensor_nombre}</strong> (${c.defensor_color})</td>
+              <td>${c.territorio_objetivo || '—'}</td>
+              <td>${c.categoria} (${c.banco_pregunta})</td>
+              <td>${c.territorio_conquistado ? '🏴 ¡Conquista!' : (c.ganador_color ? `Ganó ${c.ganador_color.toUpperCase()}` : 'Defensa resistió')}</td>
+            </tr>
+          `).join('');
+    }
+
+    cargarDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triviador Mundo & Perú — Risk Trivia</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #182640 0%, #070b14 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); color: #ffb703; margin-bottom: 0.6rem; }
+    p.sub { color: #94a3b8; max-width: 680px; font-size: 1.1rem; margin-bottom: 2.2rem; line-height: 1.5; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.4rem;
+      width: 100%;
+      max-width: 980px;
+    }
+    .card {
+      background: #111927;
+      border: 2px solid #29384e;
+      border-radius: 16px;
+      padding: 1.8rem;
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.25s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: #ffb703;
+      box-shadow: 0 12px 30px rgba(255, 183, 3, 0.2);
+    }
+    .icon { font-size: 3.2rem; }
+    .card h2 { color: #ffb703; font-size: 1.35rem; }
+    .card p { color: #cbd5e1; font-size: 0.92rem; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>🌍⚔️🇵🇪 TRIVIADOR MUNDO & PERÚ</h1>
+  <p class="sub">
+    Juego de estrategia territorial estilo Risk y duelos de conocimiento con bancos especializados independientes de Perú (21 categorías) y del Mundo (27 categorías), ataques consecutivos y 14 comodines.
+  </p>
+  <div class="cards">
+    <a href="/host.html" class="card">
+      <div class="icon">📺🗺️</div>
+      <h2>Mesa Host y Mapa Risk</h2>
+      <p>Pantalla principal para TV o PC con el Mapa Territorial Interactivo, Ruleta de Categorías de TV y Duelos Animados.</p>
+    </a>
+    <a href="/player.html" class="card">
+      <div class="icon">📱⚔️</div>
+      <h2>Control de Comandante</h2>
+      <p>Interfaz móvil para jugadores: selecciona tu color, invade territorios vecinos, responde preguntas y activa tus 14 comodines.</p>
+    </a>
+    <a href="/admin.html" class="card">
+      <div class="icon">⚙️📊</div>
+      <h2>Panel de Administración</h2>
+      <p>Gestiona preguntas de Perú y del Mundo, categorías, parametrización de comodines, reglas de combate y estadísticas.</p>
+    </a>
+  </div>
+</body>
+</html>

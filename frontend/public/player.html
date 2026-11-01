@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Control Jugador</title>
+  <title>Control Comandante - Triviador Mundo & Perú</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/soundEngine.js"></script>
   <style>
     :root {
       --rojo: #e63946;
@@ -12,16 +13,17 @@
       --amarillo: #ffb703;
       --verde: #2a9d8f;
       --negro: #343a40;
+      --gold: #ffd700;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-    
+
     body {
-      background: #111622;
+      background: radial-gradient(circle at top, #172236 0%, #0b0f19 100%);
       color: #fff;
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      padding: max(0.8rem, env(safe-area-inset-top)) max(0.8rem, env(safe-area-inset-right)) max(0.8rem, env(safe-area-inset-bottom)) max(0.8rem, env(safe-area-inset-left));
+      padding: max(0.7rem, env(safe-area-inset-top)) max(0.7rem, env(safe-area-inset-right)) max(0.7rem, env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
       overflow-x: hidden;
     }
     .hidden { display: none !important; }
@@ -30,11 +32,20 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.6rem 1rem;
+      padding: 0.55rem 0.9rem;
       border-radius: 10px;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
       font-weight: bold;
-      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+      font-size: clamp(0.85rem, 3.3vw, 1.05rem);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .empire-mini-stats {
+      display: flex;
+      gap: 0.55rem;
+      font-size: 0.82rem;
+      background: rgba(0,0,0,0.3);
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
     }
 
     .time-bar-wrapper {
@@ -43,7 +54,7 @@
       background: #232d3f;
       border-radius: 6px;
       overflow: hidden;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
     }
     .time-bar-fill {
       height: 100%;
@@ -57,18 +68,18 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 1rem;
+      gap: 0.75rem;
       text-align: center;
       width: 100%;
-      max-width: 450px;
+      max-width: 480px;
       margin: 0 auto;
     }
 
     input, select, button {
-      padding: 0.85rem;
+      padding: 0.75rem;
       border-radius: 10px;
       border: none;
-      font-size: clamp(1rem, 4vw, 1.15rem);
+      font-size: clamp(0.95rem, 3.8vw, 1.1rem);
     }
 
     .color-picker {
@@ -81,61 +92,152 @@
       color: white;
       cursor: pointer;
       text-transform: uppercase;
-      min-height: 55px;
+      min-height: 54px;
     }
     .btn-color:disabled { opacity: 0.2; }
 
-    .comodines-row {
+    /* PANEL DE ATAQUE Y ESTRATEGIA */
+    .card-box {
+      background: #162032;
+      border: 1px solid #2b3b54;
+      border-radius: 12px;
+      padding: 0.8rem;
+      text-align: left;
+    }
+    .card-box label {
+      font-size: 0.85rem;
+      color: #ffb703;
+      font-weight: 800;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+    .streak-banner {
+      background: linear-gradient(90deg, #1e293b, #0f172a);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 0.45rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    /* Comodines Estratégicos de Mapa y Combate */
+    .tactical-comodines-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+    .btn-tac-comodin {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 0.45rem 0.3rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
       display: flex;
-      gap: 0.5rem;
-      margin-bottom: 0.6rem;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+    }
+    .btn-tac-comodin:disabled { opacity: 0.28; cursor: not-allowed; }
+    .btn-tac-comodin.active-buff { border-color: var(--gold); background: #3b2f0b; }
+
+    /* DUELO EN MÓVIL */
+    .comodines-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+      margin-bottom: 0.45rem;
     }
     .btn-comodin {
-      flex: 1;
       background: #232d3f;
       color: white;
       font-weight: bold;
-      font-size: clamp(0.85rem, 3vw, 1rem);
-      padding: 0.7rem;
+      font-size: 0.8rem;
+      padding: 0.5rem 0.3rem;
       cursor: pointer;
-      min-height: 48px;
+      min-height: 42px;
+      border: 1px solid #334155;
     }
     .btn-comodin:disabled { opacity: 0.25; cursor: not-allowed; }
 
     #parrot-box {
       background: #1e2838;
       border: 2px solid #ffb703;
-      padding: 0.75rem;
+      padding: 0.65rem;
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       text-align: center;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
       display: none;
+    }
+
+    #mobile-question-preview {
+      background: #fbf2c4;
+      color: #3f2b09;
+      border: 3px solid #b89146;
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      line-height: 1.3;
     }
 
     .answers-grid {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      min-height: 200px;
+      gap: 0.6rem;
+      min-height: 190px;
     }
     .btn-opt {
-      font-size: clamp(2.2rem, 9vw, 3.5rem);
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
       font-weight: 900;
       background: #1c2433;
       color: white;
       border-radius: 14px;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 80px;
-      border-bottom: 5px solid rgba(0,0,0,0.3);
+      min-height: 82px;
+      padding: 0.5rem;
+      border: 2px solid #2e3e55;
+      border-bottom: 5px solid rgba(0,0,0,0.35);
+      transition: transform 0.15s, background 0.2s;
+    }
+    .btn-opt .opt-letter {
+      color: var(--amarillo);
+      font-size: 1.4rem;
+    }
+    .btn-opt .opt-txt {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-top: 0.2rem;
+      line-height: 1.15;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .btn-opt:active { transform: scale(0.96); }
-    .btn-opt:disabled { opacity: 0.2; }
+    .btn-opt:disabled { opacity: 0.18; text-decoration: line-through; }
     .btn-opt.selected { background: #ffb703; color: black; }
+    .btn-opt.smashed {
+      animation: hammerHit 0.45s ease-out;
+    }
+    @keyframes hammerHit {
+      0% { transform: scale(1.1) rotate(-4deg); background: #e63946; }
+      100% { transform: scale(0.92); opacity: 0.18; }
+    }
 
     .year-box {
       flex: 1;
@@ -143,13 +245,13 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 0.8rem;
+      gap: 0.7rem;
       width: 100%;
     }
     .year-box input[type="number"] {
       width: 100%;
       max-width: 280px;
-      font-size: clamp(2.5rem, 10vw, 3.5rem);
+      font-size: clamp(2.2rem, 9vw, 3.2rem);
       font-weight: 900;
       text-align: center;
       background: #1c2433;
@@ -167,8 +269,8 @@
       background: #232d3f;
       color: white;
       font-weight: bold;
-      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
-      padding: 0.7rem 0;
+      font-size: 0.95rem;
+      padding: 0.65rem 0;
     }
     .btn-send-year {
       width: 100%;
@@ -176,8 +278,8 @@
       background: #2a9d8f;
       color: white;
       font-weight: 900;
-      font-size: 1.25rem;
-      padding: 1rem;
+      font-size: 1.2rem;
+      padding: 0.9rem;
       cursor: pointer;
     }
 
@@ -190,26 +292,34 @@
       background: #192333;
       border: 2px solid #2a9d8f;
       border-radius: 12px;
-      padding: 1.5rem;
+      padding: 1.2rem;
     }
   </style>
 </head>
 <body>
 
+  <!-- BARRA DE COMANDANTE -->
   <div id="user-bar" class="hidden">
-    <span id="txt-name">Nombre</span>
-    <span id="txt-color">COLOR</span>
+    <div>
+      <span id="txt-name">Nombre</span>
+      <span style="opacity:0.8; font-size:0.8rem;">(<span id="txt-color">COLOR</span>)</span>
+    </div>
+    <div class="empire-mini-stats">
+      <span id="stat-terr">🏳️ 0</span>
+      <span id="stat-troops">💂 0</span>
+      <span id="stat-pts">🏆 300</span>
+    </div>
   </div>
 
   <div class="time-bar-wrapper hidden" id="player-time-box">
     <div class="time-bar-fill" id="player-time-bar"></div>
   </div>
 
-  <!-- REGISTRO -->
+  <!-- 1. PANTALLA REGISTRO -->
   <div id="screen-reg" class="panel-center">
-    <h2 style="color: #ffb703; font-size: clamp(1.4rem, 5vw, 1.8rem);">Ingreso al Combate</h2>
-    <input type="text" id="in-name" placeholder="Tu Nombre o Apodo" maxlength="12">
-    <p style="color: #94a3b8; font-size: 0.95rem;">Elige tu color del Risk:</p>
+    <h2 style="color: #ffb703; font-size: clamp(1.4rem, 5vw, 1.8rem);">⚔️ Ingreso al Imperio</h2>
+    <input type="text" id="in-name" placeholder="Tu Nombre de Comandante" maxlength="14" style="background:#1c2433; color:#fff; border:1px solid #334155;">
+    <p style="color: #94a3b8; font-size: 0.92rem;">Elige el color de tu ejército:</p>
     <div class="color-picker">
       <button class="btn-color" data-color="rojo" style="background:var(--rojo);">Rojo</button>
       <button class="btn-color" data-color="azul" style="background:var(--azul);">Azul</button>
@@ -219,66 +329,191 @@
     </div>
   </div>
 
-  <!-- ESPERA -->
+  <!-- 2. PANTALLA DE ESPERA / GUARDIA DEFENSIVA -->
   <div id="screen-wait" class="panel-center hidden">
-    <h3 style="font-size: clamp(1.2rem, 5vw, 1.6rem);">Esperando combate...</h3>
-    <p id="wait-msg" style="color: #94a3b8;">Atento al tablero físico y a la TV.</p>
+    <div style="font-size:3rem;">🛡️</div>
+    <h3 id="wait-title" style="font-size: clamp(1.2rem, 5vw, 1.55rem); color:#ffb703;">En Guardia Estratégica...</h3>
+    <p id="wait-msg" style="color: #94a3b8; font-size:0.95rem;">Observa el Mapa en la pantalla Host y prepárate por si atacan uno de tus territorios.</p>
+    <div class="card-box" style="margin-top:0.5rem;">
+      <label>🛡️ Comodines de Mapa / Defensa Rápida:</label>
+      <div class="tactical-comodines-grid">
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('escudo')">
+          <span>🛡️ Escudo</span>
+          <small>Disp: <span class="cnt-escudo">0</span></small>
+        </button>
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('refuerzos')">
+          <span>⚔️ +3 Tropas</span>
+          <small>Disp: <span class="cnt-refuerzos">0</span></small>
+        </button>
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('proteccion_territorial')">
+          <span>🏰 Muralla</span>
+          <small>Disp: <span class="cnt-proteccion">0</span></small>
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- DECLARAR ATAQUE -->
+  <!-- 3. PANTALLA DECLARAR ATAQUE (SOPORTA ATAQUES CONSECUTIVOS ESTILO RISK) -->
   <div id="screen-attack" class="panel-center hidden">
-    <h2 style="color: #ffb703; font-size: clamp(1.3rem, 5vw, 1.7rem);">¡Tu Turno de Atacar!</h2>
-    <label style="color:#cbd5e1;">¿A quién vas a atacar?</label>
-    <select id="sel-rival" style="background:#1c2433; color:white;"></select>
+    <h2 id="attack-phase-title" style="color: #ffb703; font-size: clamp(1.25rem, 4.8vw, 1.6rem);">⚔️ ¡Tu Fase de Ataque!</h2>
+    <div class="streak-banner" id="streak-banner-txt">
+      🔥 Ataques realizados en este turno: 0 / 5 (Puedes atacar territorios conectados)
+    </div>
 
-    <div style="background:#192333; padding:0.8rem; border-radius:10px; margin-top:0.6rem; border:1px solid #2e3e55;">
-      <button type="button" id="btn-toggle-comodin-cat" style="width:100%; background:#3b4a6b; color:#fff; cursor:pointer;">
-        🎯 Usar Comodín de Tema (<span id="cnt-c">0</span> disponibles)
+    <div class="card-box">
+      <label>🗺️ 1. Selecciona el Territorio Enemigo a Invadir:</label>
+      <select id="sel-territorio-objetivo" style="background:#0f172a; color:white; width:100%; border:1px solid #3b82f6; margin-bottom:0.5rem;"></select>
+
+      <label style="color:#94a3b8; font-weight:600; font-size:0.78rem;">O filtra por Comandante Rival:</label>
+      <select id="sel-rival" style="background:#1c2433; color:white; width:100%; padding:0.5rem; font-size:0.9rem;"></select>
+    </div>
+
+    <!-- Selección de Categoría estilo TV / Comodín de Tema -->
+    <div class="card-box">
+      <button type="button" id="btn-toggle-comodin-cat" style="width:100%; background:#3b4a6b; color:#fff; cursor:pointer; font-weight:bold; padding:0.6rem;">
+        🎯 Usar Cambio de Categoría (<span id="cnt-c">0</span> disponibles)
       </button>
 
-      <div id="box-cat-select" class="hidden" style="margin-top:0.6rem;">
-        <label style="font-size:0.9rem; color:#ffb703;">Elige la categoría:</label>
-        <select id="sel-cat" style="background:#111722; color:white; width:100%; margin-top:0.3rem;">
-          <option value="cultura_peruana">Cultura Peruana</option>
-          <option value="deportes">Deportes</option>
-          <option value="historia">Historia</option>
-          <option value="cine">Cine y Películas</option>
-          <option value="ciencia">Ciencia y Naturaleza</option>
-          <option value="geografia">Geografía</option>
-          <option value="arte">Arte y Literatura</option>
+      <div id="box-cat-select" class="hidden" style="margin-top:0.55rem;">
+        <label style="font-size:0.85rem; color:#ffb703;">Elige la categoría del duelo (Perú, Mundo o TV Especial):</label>
+        <select id="sel-cat" style="background:#0f172a; color:white; width:100%; margin-top:0.25rem; border:1px solid #ffb703;">
+          <optgroup label="🎡 Rondas Especiales de TV">
+            <option value="ruleta_dorada">🎡 Ruleta Dorada (x1.5 Puntos)</option>
+            <option value="desafio_experto">🔥 Desafío Maestro (Nivel Avanzado)</option>
+            <option value="caja_sorpresa">🎁 Caja Sorpresa Misteriosa</option>
+            <option value="duelo_peru_mundo">🌎 Fusión Perú & Mundo</option>
+          </optgroup>
+          <optgroup label="🇵🇪 Banco Especializado del Perú (21 Categorías)">
+            <option value="cultura_peruana">🇵🇪 Especial Integral Cultura Peruana</option>
+            <option value="historia_peru">📜 Historia del Perú</option>
+            <option value="geografia_peru">🏔️ Geografía del Perú</option>
+            <option value="gastronomia_peruana">🍲 Gastronomía Peruana</option>
+            <option value="literatura_peruana">📚 Literatura Peruana</option>
+            <option value="personajes_historicos_peru">🎖️ Personajes Históricos del Perú</option>
+            <option value="turismo_lugares_peru">🏯 Turismo y Lugares Históricos</option>
+            <option value="regiones_departamentos_peru">🗺️ Regiones, Departamentos y Provincias</option>
+            <option value="civilizaciones_preincaicas">🏺 Civilizaciones Preincaicas</option>
+            <option value="imperio_incaico">☀️ Imperio Incaico</option>
+            <option value="virreinato_peru">👑 Virreinato del Perú</option>
+            <option value="independencia_peru">🗽 Independencia del Perú</option>
+            <option value="futbol_peruano">⚽ Fútbol Peruano</option>
+            <option value="deportes_peruanos">🏅 Deportes Peruanos</option>
+            <option value="musica_artistas_peru">🎸 Música y Artistas Peruanos</option>
+            <option value="flora_fauna_peru">🦙 Flora y Fauna del Perú</option>
+            <option value="festividades_costumbres_peru">🎉 Festividades y Costumbres</option>
+            <option value="politica_instituciones_peru">🏛️ Política e Instituciones del Perú</option>
+            <option value="economia_peruana">🪙 Economía Peruana</option>
+            <option value="ciencia_tecnologia_peru">🔬 Ciencia y Tecnología en el Perú</option>
+            <option value="actualidad_peruana">📰 Actualidad Peruana</option>
+          </optgroup>
+          <optgroup label="🌍 Banco de Conocimiento Mundial (27 Categorías)">
+            <option value="historia_universal">⚔️ Historia Universal</option>
+            <option value="geografia_mundial">🌍 Geografía Mundial</option>
+            <option value="paises_capitales">🏳️ Países y Capitales</option>
+            <option value="ciencia">🧪 Ciencia</option>
+            <option value="tecnologia">💻 Tecnología</option>
+            <option value="astronomia">🪐 Astronomía</option>
+            <option value="naturaleza_animales">🦁 Naturaleza y Animales</option>
+            <option value="futbol_mundial">⚽ Fútbol Mundial</option>
+            <option value="deportes_internacionales">🏆 Deportes Internacionales</option>
+            <option value="cine_television">🎬 Cine y Televisión</option>
+            <option value="musica_internacional">🎵 Música Internacional</option>
+            <option value="arte_pintura">🎨 Arte y Pintura</option>
+            <option value="literatura_universal">📖 Literatura Universal</option>
+            <option value="inventos_descubrimientos">💡 Inventos y Descubrimientos</option>
+            <option value="cultura_general">🧠 Cultura General</option>
+            <option value="mitologia">⚡ Mitología</option>
+            <option value="religion_civilizaciones">🕌 Religión y Civilizaciones</option>
+            <option value="matematicas">📐 Matemáticas</option>
+            <option value="fisica_quimica">⚛️ Física y Química</option>
+            <option value="biologia">🧬 Biología</option>
+            <option value="maravillas_mundo">🗽 Maravillas del Mundo</option>
+            <option value="personajes_famosos">🌟 Personajes Famosos</option>
+            <option value="videojuegos">🎮 Videojuegos</option>
+            <option value="series_entretenimiento">📺 Series y Entretenimiento</option>
+            <option value="politica_internacional">🌐 Política Internacional</option>
+            <option value="economia_mundial">💹 Economía Mundial</option>
+            <option value="actualidad_internacional">🛰️ Actualidad Internacional</option>
+          </optgroup>
         </select>
       </div>
     </div>
 
-    <button id="btn-atacar" style="background:#e63946; color:white; font-weight:bold; font-size:1.25rem; margin-top:0.8rem; cursor:pointer;">
-      ⚔️ ¡LANZAR ATAQUE!
+    <!-- Comodines Estratégicos Pre-Ataque -->
+    <div class="card-box">
+      <label>⚡ Potenciadores de Asalto y Mapa:</label>
+      <div class="tactical-comodines-grid">
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('refuerzos')">
+          <span>⚔️ +3 Tropas</span>
+          <small>Disp: <span class="cnt-refuerzos">0</span></small>
+        </button>
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('escudo')">
+          <span>🛡️ Escudo</span>
+          <small>Disp: <span class="cnt-escudo">0</span></small>
+        </button>
+        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('proteccion_territorial')">
+          <span>🏰 Muralla</span>
+          <small>Disp: <span class="cnt-proteccion">0</span></small>
+        </button>
+      </div>
+    </div>
+
+    <button id="btn-atacar" style="background:linear-gradient(135deg, #e63946, #d90429); color:white; font-weight:900; font-size:1.2rem; cursor:pointer; box-shadow:0 4px 15px rgba(230,57,70,0.4);">
+      ⚔️ ¡LANZAR ATAQUE TERRITORIAL!
     </button>
 
-    <button type="button" id="btn-pasar" style="background:#475569; color:white; font-weight:bold; font-size:1.1rem; margin-top:0.6rem; cursor:pointer;">
-      ⏭️ Omitir Ataque (Pasar Turno)
+    <button type="button" id="btn-pasar" style="background:#334155; color:white; font-weight:bold; font-size:1rem; cursor:pointer;">
+      🚩 Finalizar Fase de Ataque / Pasar Turno
     </button>
   </div>
 
-  <!-- DUELO -->
-  <div id="screen-battle" class="hidden" style="flex:1; display:flex; flex-direction:column; max-width:450px; margin:0 auto; width:100%;">
+  <!-- 4. PANTALLA DE DUELO -->
+  <div id="screen-battle" class="hidden" style="flex:1; display:flex; flex-direction:column; max-width:480px; margin:0 auto; width:100%;">
+    <!-- Fila 1: Comodines Clásicos y de Pregunta -->
     <div class="comodines-row">
       <button class="btn-comodin" id="btn-martillo">🔨 Martillo (<span id="cnt-m">0</span>)</button>
       <button class="btn-comodin" id="btn-loro">🦜 Loro (<span id="cnt-l">0</span>)</button>
+      <button class="btn-comodin" id="btn-dardo" onclick="usarComodinDuelo('eliminar_alternativa')">🎯 -1 Op (<span id="cnt-dardo">0</span>)</button>
+      <button class="btn-comodin" id="btn-sabio" onclick="usarComodinDuelo('revelar_respuesta')">📜 Pista (<span id="cnt-sabio">0</span>)</button>
+      <button class="btn-comodin" id="btn-tiempo" onclick="usarComodinDuelo('tiempo_adicional')">⏳ +10s (<span id="cnt-tiempo">0</span>)</button>
+      <button class="btn-comodin" id="btn-fenix" onclick="usarComodinDuelo('segunda_oportunidad')">🦅 Fénix (<span id="cnt-fenix">0</span>)</button>
+    </div>
+
+    <!-- Fila 2: Comodines de Combate y Puntos -->
+    <div class="comodines-row" style="margin-bottom:0.5rem;">
+      <button class="btn-comodin" id="btn-doble" onclick="usarComodinDuelo('doble_puntuacion')">👑 x2 Pts (<span id="cnt-doble">0</span>)</button>
+      <button class="btn-comodin" id="btn-asedio" onclick="usarComodinDuelo('ataque_especial')">💣 +2 Daño (<span id="cnt-asedio">0</span>)</button>
+      <button class="btn-comodin" id="btn-congelar" onclick="usarComodinDuelo('congelar_rival')">❄️ Congelar (<span id="cnt-congelar">0</span>)</button>
     </div>
 
     <div id="parrot-box"></div>
 
+    <!-- Vista previa de la pregunta en el móvil -->
+    <div id="mobile-question-preview">Cargando pregunta del duelo...</div>
+
     <!-- Opciones A B C D -->
     <div class="answers-grid" id="grid-abcd">
-      <button class="btn-opt" data-opt="A">A</button>
-      <button class="btn-opt" data-opt="B">B</button>
-      <button class="btn-opt" data-opt="C">C</button>
-      <button class="btn-opt" data-opt="D">D</button>
+      <button class="btn-opt" data-opt="A">
+        <span class="opt-letter">A</span>
+        <span class="opt-txt" id="mob-opt-A"></span>
+      </button>
+      <button class="btn-opt" data-opt="B">
+        <span class="opt-letter">B</span>
+        <span class="opt-txt" id="mob-opt-B"></span>
+      </button>
+      <button class="btn-opt" data-opt="C">
+        <span class="opt-letter">C</span>
+        <span class="opt-txt" id="mob-opt-C"></span>
+      </button>
+      <button class="btn-opt" data-opt="D">
+        <span class="opt-letter">D</span>
+        <span class="opt-txt" id="mob-opt-D"></span>
+      </button>
     </div>
 
     <!-- Desempate Numérico / Diana -->
     <div class="year-box hidden" id="box-year-input">
-      <span style="color:#cbd5e1; font-weight:bold;">Escribe tu número aproximado:</span>
+      <span style="color:#cbd5e1; font-weight:bold;">🎯 Ingresa tu número aproximado:</span>
       <input type="number" id="in-year-num" placeholder="Escribe aquí..." inputmode="numeric">
       <div class="year-stepper">
         <button type="button" onclick="ajustarNumero(-10)">-10</button>
@@ -291,16 +526,15 @@
 
     <!-- Confirmación de Respuesta -->
     <div id="confirmed-box" class="hidden">
-      <h2 style="color:#2a9d8f; font-size:1.6rem; margin-bottom:0.4rem;">¡Respuesta Enviada!</h2>
-      <div id="txt-confirmed-val" style="font-size:2rem; font-weight:900; color:#ffb703;"></div>
-      <p style="color:#94a3b8; margin-top:0.6rem; font-size:0.95rem;">Mirando los resultados en la TV...</p>
+      <h2 style="color:#2a9d8f; font-size:1.5rem; margin-bottom:0.35rem;">✓ ¡Respuesta Enviada!</h2>
+      <div id="txt-confirmed-val" style="font-size:1.85rem; font-weight:900; color:#ffb703;"></div>
+      <p style="color:#94a3b8; margin-top:0.5rem; font-size:0.9rem;">Esperando resolución del combate en el Mapa...</p>
     </div>
 
-    <div id="txt-status" style="text-align:center; font-weight:bold; color:#ffb703; margin-top:0.6rem; min-height:1.2rem;"></div>
+    <div id="txt-status" style="text-align:center; font-weight:bold; color:#ffb703; margin-top:0.5rem; min-height:1.2rem;"></div>
   </div>
 
   <script>
-    // Wake Lock API: Mantiene encendida la pantalla del celular sin que se bloquee
     let wakeLock = null;
     async function activarWakeLock() {
       try {
@@ -319,6 +553,7 @@
     let yaRespondio = false;
     let usandoComodinTema = false;
     let timerOcultarPantalla = null;
+    let estadoMapaLocal = null;
 
     const screenReg = document.getElementById('screen-reg');
     const screenWait = document.getElementById('screen-wait');
@@ -333,6 +568,21 @@
     const btnToggleComodinCat = document.getElementById('btn-toggle-comodin-cat');
     const confirmedBox = document.getElementById('confirmed-box');
     const txtConfirmedVal = document.getElementById('txt-confirmed-val');
+    const selTerritorioObjetivo = document.getElementById('sel-territorio-objetivo');
+    const selRival = document.getElementById('sel-rival');
+
+    // Reconexión automática si el jugador tenía sesión activa guardada
+    socket.on('connect', () => {
+      const savedSession = localStorage.getItem('risk_player_session');
+      if (savedSession && !miJugador) {
+        try {
+          const { nombre, color } = JSON.parse(savedSession);
+          if (nombre && color) {
+            document.getElementById('in-name').value = nombre;
+          }
+        } catch (e) {}
+      }
+    });
 
     socket.on('lobby_colores_disponibles', (disp) => {
       document.querySelectorAll('.btn-color').forEach(b => b.disabled = !disp.includes(b.dataset.color));
@@ -341,10 +591,18 @@
     document.querySelectorAll('.btn-color').forEach(b => {
       b.addEventListener('click', () => {
         const nombre = document.getElementById('in-name').value.trim();
-        if (!nombre) return alert('Escribe tu nombre');
+        if (!nombre) return alert('Escribe tu nombre de comandante');
+        window.soundFX.play('select');
+        localStorage.setItem('risk_player_session', JSON.stringify({ nombre, color: b.dataset.color }));
         socket.emit('jugador_unirse', { nombre, color: b.dataset.color });
         activarWakeLock();
       });
+    });
+
+    socket.on('error_registro', (err) => alert(err));
+    socket.on('error_juego', (err) => {
+      window.soundFX.play('wrong');
+      alert(err);
     });
 
     socket.on('registro_exitoso', (j) => {
@@ -359,7 +617,24 @@
       document.getElementById('txt-name').textContent = j.nombre;
       document.getElementById('txt-color').textContent = j.color.toUpperCase();
 
+      actualizarBarraImperio(j);
       refrescarInventario(j.comodines);
+    });
+
+    function actualizarBarraImperio(j) {
+      if (!j) return;
+      document.getElementById('stat-terr').textContent = `🏳️ ${j.territoriosCount || 0}`;
+      document.getElementById('stat-troops').textContent = `💂 ${j.soldadosTotales || 0}`;
+      document.getElementById('stat-pts').textContent = `🏆 ${j.puntos || 0}`;
+    }
+
+    socket.on('actualizacion_jugadores', (jugadores) => {
+      if (!miJugador) return;
+      const yo = jugadores.find(x => x.id === socket.id || x.color === miJugador.color);
+      if (yo) {
+        miJugador = yo;
+        actualizarBarraImperio(yo);
+      }
     });
 
     socket.on('actualizar_comodines', (comodines) => {
@@ -373,60 +648,136 @@
       if (!c) return;
       document.getElementById('cnt-m').textContent = c.martillo ?? 0;
       document.getElementById('cnt-l').textContent = c.loro ?? 0;
-      document.getElementById('cnt-c').textContent = c.tema ?? 0;
+      document.getElementById('cnt-c').textContent = c.tema ?? c.cambio_categoria ?? 0;
+      document.getElementById('cnt-dardo').textContent = c.eliminar_alternativa ?? 0;
+      document.getElementById('cnt-sabio').textContent = c.revelar_respuesta ?? 0;
+      document.getElementById('cnt-tiempo').textContent = c.tiempo_adicional ?? 0;
+      document.getElementById('cnt-fenix').textContent = c.segunda_oportunidad ?? 0;
+      document.getElementById('cnt-doble').textContent = c.doble_puntuacion ?? 0;
+      document.getElementById('cnt-asedio').textContent = c.ataque_especial ?? 0;
+      document.getElementById('cnt-congelar').textContent = c.congelar_rival ?? 0;
 
-      btnToggleComodinCat.disabled = (c.tema ?? 0) <= 0;
+      document.querySelectorAll('.cnt-escudo').forEach(el => el.textContent = c.escudo ?? 0);
+      document.querySelectorAll('.cnt-refuerzos').forEach(el => el.textContent = c.refuerzos ?? 0);
+      document.querySelectorAll('.cnt-proteccion').forEach(el => el.textContent = c.proteccion_territorial ?? 0);
+
+      btnToggleComodinCat.disabled = (c.tema ?? c.cambio_categoria ?? 0) <= 0;
       document.getElementById('btn-martillo').disabled = (c.martillo ?? 0) <= 0;
       document.getElementById('btn-loro').disabled = (c.loro ?? 0) <= 0;
+      document.getElementById('btn-dardo').disabled = (c.eliminar_alternativa ?? 0) <= 0;
+      document.getElementById('btn-sabio').disabled = (c.revelar_respuesta ?? 0) <= 0;
+      document.getElementById('btn-tiempo').disabled = (c.tiempo_adicional ?? 0) <= 0;
+      document.getElementById('btn-fenix').disabled = (c.segunda_oportunidad ?? 0) <= 0;
+      document.getElementById('btn-doble').disabled = (c.doble_puntuacion ?? 0) <= 0;
+      document.getElementById('btn-asedio').disabled = (c.ataque_especial ?? 0) <= 0;
+      document.getElementById('btn-congelar').disabled = (c.congelar_rival ?? 0) <= 0;
     }
 
-    socket.on('fuiste_expulsado', () => { alert('Expulsado de la sala.'); location.reload(); });
+    socket.on('fuiste_expulsado', () => {
+      localStorage.removeItem('risk_player_session');
+      alert('Expulsado de la sala.');
+      location.reload();
+    });
 
     btnToggleComodinCat.addEventListener('click', () => {
-      if ((miJugador.comodines.tema ?? 0) <= 0) return alert('No te quedan comodines de tema.');
+      const disp = miJugador.comodines.tema ?? miJugador.comodines.cambio_categoria ?? 0;
+      if (disp <= 0) return alert('No te quedan comodines de Cambio de Categoría.');
       usandoComodinTema = !usandoComodinTema;
       if (usandoComodinTema) {
         boxCatSelect.classList.remove('hidden');
         btnToggleComodinCat.style.background = '#2a9d8f';
-        btnToggleComodinCat.textContent = '✓ Comodín Activo (Gastará 1)';
+        btnToggleComodinCat.textContent = '✓ Categoría Elegida Activa (Gastará 1)';
       } else {
         boxCatSelect.classList.add('hidden');
         btnToggleComodinCat.style.background = '#3b4a6b';
-        btnToggleComodinCat.textContent = `🎯 Usar Comodín de Tema (${miJugador.comodines.tema} disponibles)`;
+        btnToggleComodinCat.textContent = `🎯 Usar Cambio de Categoría (${disp} disponibles)`;
       }
     });
 
-    socket.on('turno_actualizado', ({ atacanteId, jugadores }) => {
+    socket.on('mapa_actualizado', (estadoMapa) => {
+      estadoMapaLocal = estadoMapa;
+      if (miJugador) {
+        const yo = (estadoMapa.jugadores || []).find(x => x.id === socket.id || x.color === miJugador.color);
+        if (yo) actualizarBarraImperio(yo);
+        poblarSelectoresTerritoriosYRivales();
+      }
+    });
+
+    function poblarSelectoresTerritoriosYRivales() {
+      if (!estadoMapaLocal || !miJugador) return;
+      const atacablesSet = new Set(estadoMapaLocal.territoriosAtacables || []);
+      const enemigos = (estadoMapaLocal.territorios || []).filter(t => t.propietarioColor !== miJugador.color);
+
+      // Ordenar primero los conectados (atacables directos)
+      enemigos.sort((a, b) => (atacablesSet.has(b.codigo) ? 1 : 0) - (atacablesSet.has(a.codigo) ? 1 : 0));
+
+      selTerritorioObjetivo.innerHTML = '';
+      enemigos.forEach(t => {
+        const esConectado = atacablesSet.has(t.codigo);
+        const opt = document.createElement('option');
+        opt.value = t.codigo;
+        opt.dataset.color = t.propietarioColor;
+        const flag = t.mapa === 'peru' ? '🇵🇪' : '🌍';
+        opt.textContent = `${esConectado ? '⚔️ [Frontera]' : '🔒'} ${flag} ${t.nombre} — ${t.propietarioNombre} (${t.soldados} 💂)`;
+        selTerritorioObjetivo.appendChild(opt);
+      });
+    }
+
+    selRival.addEventListener('change', () => {
+      const col = selRival.value;
+      const match = Array.from(selTerritorioObjetivo.options).find(o => o.dataset.color === col);
+      if (match) selTerritorioObjetivo.value = match.value;
+    });
+
+    socket.on('turno_actualizado', ({ atacanteId, atacanteNombre, ataquesRealizados, maxAtaquesConsecutivos, jugadores }) => {
       if (!miJugador) return;
 
       if (socket.id === atacanteId) {
+        window.soundFX.play('select');
         screenWait.classList.add('hidden');
         screenBattle.classList.add('hidden');
         screenAttack.classList.remove('hidden');
 
+        const racha = ataquesRealizados || 0;
+        const maxR = maxAtaquesConsecutivos || 5;
+        document.getElementById('attack-phase-title').textContent =
+          racha > 0 ? `🔥 ¡Ataque Consecutivo #${racha + 1}!` : '⚔️ ¡Tu Turno de Atacar!';
+        document.getElementById('streak-banner-txt').textContent =
+          racha > 0
+            ? `🏆 ¡Ganaste el duelo anterior! Ataques en este turno: ${racha} / ${maxR}. ¡Elige otro territorio o finaliza tu turno!`
+            : `⚔️ Fase de invasión activa (${racha} / ${maxR} ataques). Elige un territorio vecino enemigo.`;
+
+        const disp = miJugador.comodines.tema ?? miJugador.comodines.cambio_categoria ?? 0;
         usandoComodinTema = false;
         boxCatSelect.classList.add('hidden');
         btnToggleComodinCat.style.background = '#3b4a6b';
-        btnToggleComodinCat.textContent = `🎯 Usar Comodín de Tema (${miJugador.comodines.tema} disponibles)`;
+        btnToggleComodinCat.textContent = `🎯 Usar Cambio de Categoría (${disp} disponibles)`;
 
-        const sel = document.getElementById('sel-rival');
-        sel.innerHTML = '';
+        selRival.innerHTML = '';
         jugadores.filter(r => r.id !== socket.id).forEach(r => {
           const opt = document.createElement('option');
           opt.value = r.color;
-          opt.textContent = `${r.nombre} (${r.color.toUpperCase()})`;
-          sel.appendChild(opt);
+          opt.textContent = `${r.nombre} (${r.color.toUpperCase()} — ${r.territoriosCount || 0} terr.)`;
+          selRival.appendChild(opt);
         });
+
+        poblarSelectoresTerritoriosYRivales();
       } else {
         screenAttack.classList.add('hidden');
         screenBattle.classList.add('hidden');
         screenWait.classList.remove('hidden');
+        document.getElementById('wait-msg').textContent = atacanteNombre
+          ? `Turno actual de ${atacanteNombre}. ¡Prepárate para defender tus territorios!`
+          : 'Atento al Mapa Estratégico en la pantalla Host.';
       }
     });
 
     document.getElementById('btn-atacar').addEventListener('click', () => {
+      window.soundFX.play('attack');
+      const optTer = selTerritorioObjetivo.options[selTerritorioObjetivo.selectedIndex];
       socket.emit('declarar_ataque', {
-        defensorColor: document.getElementById('sel-rival').value,
+        territorioObjetivo: selTerritorioObjetivo.value || null,
+        defensorColor: optTer ? optTer.dataset.color : selRival.value,
         categoriaDeseada: document.getElementById('sel-cat').value,
         usoComodinTema: usandoComodinTema
       });
@@ -435,13 +786,14 @@
     socket.on('tick_tiempo', ({ tiempo, total }) => {
       if (miJugador && !screenBattle.classList.contains('hidden')) {
         playerTimeBox.classList.remove('hidden');
-        playerTimeBar.style.width = `${(tiempo / total) * 100}%`;
+        playerTimeBar.style.width = `${Math.min(100, (tiempo / total) * 100)}%`;
       }
     });
 
     // DUELO ACTIVO
-    socket.on('tu_turno_responder', ({ tipo }) => {
+    socket.on('tu_turno_responder', (payload) => {
       clearTimeout(timerOcultarPantalla);
+      window.soundFX.play('attack');
 
       yaRespondio = false;
       screenWait.classList.add('hidden');
@@ -450,31 +802,44 @@
       confirmedBox.classList.add('hidden');
 
       parrotBox.style.display = 'none';
-      txtStatus.textContent = '';
+      txtStatus.textContent = payload.soyAtacante
+        ? `⚔️ Atacando ${payload.territorioObjetivoNombre || 'territorio'}`
+        : `🛡️ Defendiendo ${payload.territorioObjetivoNombre || 'tu territorio'}`;
+      txtStatus.style.color = payload.soyAtacante ? '#ffb703' : '#38bdf8';
 
-      const isAprox = tipo === 'aproximacion';
+      document.getElementById('mobile-question-preview').textContent =
+        payload.preguntaTexto || 'Mira la pregunta en la pantalla principal';
+
+      const isAprox = payload.tipo === 'aproximacion';
       document.getElementById('grid-abcd').classList.toggle('hidden', isAprox);
       document.getElementById('box-year-input').classList.toggle('hidden', !isAprox);
 
-      document.getElementById('btn-martillo').disabled = isAprox || (miJugador.comodines.martillo <= 0);
-      document.getElementById('btn-loro').disabled = miJugador.comodines.loro <= 0;
-
+      refrescarInventario(miJugador.comodines);
       if (isAprox) {
+        document.getElementById('btn-martillo').disabled = true;
+        document.getElementById('btn-dardo').disabled = true;
+        document.getElementById('btn-fenix').disabled = true;
         inYearNum.disabled = false;
         document.getElementById('btn-send-year').disabled = false;
-        inYearNum.value = ''; // Inicia totalmente vacío
+        inYearNum.value = '';
         setTimeout(() => inYearNum.focus(), 250);
       } else {
+        if (payload.opciones) {
+          ['A', 'B', 'C', 'D'].forEach(letra => {
+            const spanTxt = document.getElementById(`mob-opt-${letra}`);
+            if (spanTxt) spanTxt.textContent = payload.opciones[letra] || '';
+          });
+        }
         document.querySelectorAll('.btn-opt').forEach(b => {
           b.disabled = false;
-          b.classList.remove('selected');
+          b.classList.remove('selected', 'smashed');
         });
       }
     });
 
     window.ajustarNumero = function(delta) {
       if (yaRespondio) return;
-      let val = inYearNum.value === '' ? 0 : parseInt(inYearNum.value);
+      let val = inYearNum.value === '' ? 1900 : parseInt(inYearNum.value);
       inYearNum.value = val + delta;
     };
 
@@ -483,6 +848,7 @@
       const val = inYearNum.value.trim();
       if (val === '') return alert('Escribe un número antes de enviar');
       yaRespondio = true;
+      window.soundFX.play('select');
       socket.emit('enviar_respuesta', { opcion: val });
 
       document.getElementById('box-year-input').classList.add('hidden');
@@ -494,42 +860,89 @@
       b.addEventListener('click', () => {
         if (yaRespondio) return;
         const op = b.dataset.opt;
-        yaRespondio = true;
+        window.soundFX.play('select');
         socket.emit('enviar_respuesta', { opcion: op });
-
-        document.getElementById('grid-abcd').classList.add('hidden');
-        confirmedBox.classList.remove('hidden');
-        txtConfirmedVal.textContent = `Opción [ ${op} ]`;
       });
     });
 
-    socket.on('respuesta_confirmada', () => {
+    socket.on('respuesta_confirmada', ({ opcion }) => {
+      yaRespondio = true;
+      document.getElementById('grid-abcd').classList.add('hidden');
+      confirmedBox.classList.remove('hidden');
+      txtConfirmedVal.textContent = `Opción [ ${opcion} ]`;
       document.getElementById('btn-martillo').disabled = true;
       document.getElementById('btn-loro').disabled = true;
     });
 
+    // Segunda Oportunidad (Fénix) cuando falla el primer intento
+    socket.on('efecto_segunda_oportunidad', ({ opcionIncorrecta, mensaje }) => {
+      yaRespondio = false;
+      window.soundFX.play('comodin');
+      const btnInc = document.querySelector(`.btn-opt[data-opt="${opcionIncorrecta}"]`);
+      if (btnInc) btnInc.disabled = true;
+      parrotBox.innerHTML = `<strong>${mensaje}</strong>`;
+      parrotBox.style.display = 'block';
+    });
+
+    // Martillo
     document.getElementById('btn-martillo').addEventListener('click', () => {
       if (!yaRespondio) socket.emit('usar_martillo');
     });
     socket.on('efecto_martillo_privado', ({ descartadas }) => {
+      window.soundFX.play('hammer');
       document.getElementById('btn-martillo').disabled = true;
       descartadas.forEach(d => {
         const btn = document.querySelector(`.btn-opt[data-opt="${d}"]`);
-        if (btn) btn.disabled = true;
+        if (btn) {
+          btn.classList.add('smashed');
+          btn.disabled = true;
+        }
       });
     });
 
+    // Loro
     document.getElementById('btn-loro').addEventListener('click', () => {
       if (!yaRespondio) socket.emit('usar_loro');
     });
     socket.on('efecto_loro_privado', (res) => {
+      window.soundFX.play('comodin');
       document.getElementById('btn-loro').disabled = true;
       if (res.tipo === 'aproximacion') {
-        parrotBox.innerHTML = `🦜 <strong>Consejo del Loro:</strong><br>${res.pista}`;
+        parrotBox.innerHTML = `🦜 <strong>Oráculo del Loro:</strong><br>${res.pista}`;
       } else {
-        parrotBox.innerHTML = `🦜 <strong>Consejo del Loro:</strong><br>` +
+        parrotBox.innerHTML = `🦜 <strong>Oráculo del Loro:</strong><br>` +
           Object.entries(res.porcentajes).map(([o, v]) => `<strong>${o}:</strong> ${v}%`).join(' | ');
       }
+      parrotBox.style.display = 'block';
+    });
+
+    // Comodines Avanzados en Duelo y Mapa
+    window.usarComodinDuelo = function(codigo) {
+      if (yaRespondio && !['doble_puntuacion', 'ataque_especial'].includes(codigo)) return;
+      socket.emit('usar_comodin_avanzado', { codigo });
+    };
+
+    window.usarComodinMapa = function(codigo) {
+      socket.emit('usar_comodin_avanzado', { codigo });
+    };
+
+    socket.on('efecto_comodin_privado', (res) => {
+      window.soundFX.play('comodin');
+      if (res.datosEfecto?.descartadas) {
+        res.datosEfecto.descartadas.forEach(d => {
+          const btn = document.querySelector(`.btn-opt[data-opt="${d}"]`);
+          if (btn) btn.disabled = true;
+        });
+      }
+      if (res.mensajePrivado) {
+        parrotBox.innerHTML = `✨ <strong>${res.mensajePrivado}</strong>`;
+        parrotBox.style.display = 'block';
+      }
+    });
+
+    socket.on('fuiste_congelado', ({ por }) => {
+      window.soundFX.play('wrong');
+      parrotBox.innerHTML = `❄️ <strong>¡${por} congeló tus comodines en este duelo!</strong>`;
       parrotBox.style.display = 'block';
     });
 
@@ -543,12 +956,20 @@
 
     socket.on('fin_duelo', (res) => {
       if (res.ganador) {
-        const soyGanador = res.ganador.id === socket.id;
-        txtStatus.textContent = soyGanador ? '🎉 ¡GANASTE EL COMBATE!' : '💀 PERDISTE EL COMBATE';
+        const soyGanador = res.ganador.id === socket.id || res.ganador.color === miJugador?.color;
+        window.soundFX.play(soyGanador ? 'conquest' : 'defeat');
+        let extra = '';
+        if (soyGanador && res.turnoContinua) {
+          extra = ' — 🔥 ¡Conservas el turno para seguir atacando!';
+        }
+        txtStatus.textContent = (soyGanador ? '🎉 ¡GANASTE EL COMBATE!' : '💀 PERDISTE EL COMBATE') + extra;
         txtStatus.style.color = soyGanador ? '#2dc653' : '#e63946';
       } else if (res.requiereDesempate) {
         txtStatus.textContent = '⚖️ ¡EMPATE! Pasando a desempate por Diana...';
         txtStatus.style.color = '#ffb703';
+      } else {
+        txtStatus.textContent = '🛡️ Asalto sin vencedor. La guarnición resiste.';
+        txtStatus.style.color = '#94a3b8';
       }
 
       if (!res.requiereDesempate) {
@@ -557,12 +978,12 @@
           screenBattle.classList.add('hidden');
           playerTimeBox.classList.add('hidden');
           screenWait.classList.remove('hidden');
-        }, 6500);
+        }, 6000);
       }
     });
 
     document.getElementById('btn-pasar').addEventListener('click', () => {
-      if (confirm('¿Deseas omitir tu ataque y pasar el turno al siguiente comandante?')) {
+      if (confirm('¿Deseas finalizar tu fase de ataque y pasar el turno al siguiente comandante?')) {
         socket.emit('pasar_turno');
       }
     });

@@ -1,223 +1,286 @@
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'preguntas.db');
-const db = new sqlite3.Database(dbPath);
+const {
+  DIFICULTADES,
+  CATEGORIAS,
+  COMODINES_CATALOGO,
+  CONFIGURACIONES_INICIALES,
+  TERRITORIOS_CATALOGO,
+  CONEXIONES_PARES
+} = require('./catalogData');
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS preguntas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tipo TEXT DEFAULT 'opcion_multiple',
-      categoria TEXT NOT NULL,
-      pregunta TEXT NOT NULL UNIQUE,
-      opcion_a TEXT,
-      opcion_b TEXT,
-      opcion_c TEXT,
-      opcion_d TEXT,
-      correcta TEXT NOT NULL,
-      anio_min INTEGER DEFAULT 1000,
-      anio_max INTEGER DEFAULT 2026
-    )
-  `);
+const { generarBancoPeru } = require('./bankPeru');
+const { generarBancoMundo } = require('./bankMundo');
+const { generarExpansionPeru, generarExpansionMundo } = require('./bankExpansion');
 
-  db.run(`DELETE FROM preguntas`);
+const dbPrincipalPath = path.join(__dirname, 'preguntas.db');
+const dbPeruPath = path.join(__dirname, 'preguntas_peru.db');
+const dbMundoPath = path.join(__dirname, 'preguntas_mundo.db');
+const schemaPath = path.join(__dirname, 'schema.sql');
 
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO preguntas (tipo, categoria, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta, anio_min, anio_max)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+function inicializarBaseIndependiente(filePath, tablaNombre, preguntas) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(filePath);
+    const colPaisORegion = tablaNombre === 'preguntas_peru' ? 'region_referencia' : 'pais_referencia';
 
-  const lista = [];
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS ${tablaNombre} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          codigo_unico TEXT NOT NULL UNIQUE,
+          tipo TEXT NOT NULL DEFAULT 'opcion_multiple',
+          categoria TEXT NOT NULL,
+          subcategoria TEXT DEFAULT 'General',
+          dificultad TEXT NOT NULL DEFAULT 'basico',
+          pregunta TEXT NOT NULL UNIQUE,
+          opcion_a TEXT,
+          opcion_b TEXT,
+          opcion_c TEXT,
+          opcion_d TEXT,
+          correcta TEXT NOT NULL,
+          anio_min INTEGER DEFAULT 1000,
+          anio_max INTEGER DEFAULT 2026,
+          explicacion TEXT DEFAULT '',
+          ${colPaisORegion} TEXT DEFAULT '',
+          fuente_verificacion TEXT DEFAULT '',
+          fecha_referencia TEXT DEFAULT '2026',
+          estado TEXT NOT NULL DEFAULT 'activo',
+          veces_usada INTEGER NOT NULL DEFAULT 0,
+          fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+          fecha_actualizacion TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-  // =========================================================================
-  // MATRIZ 1: CULTURA PERUANA (DEPARTAMENTOS, CAPITALES, ATRACTIVOS Y PLATOS)
-  // Genera más de 400 preguntas peruanas verificadas
-  // =========================================================================
-  const departamentosPeru = [
-    { dep: 'Amazonas', cap: 'Chachapoyas', atr: 'la fortaleza de Kuélap', plato: 'el Purtumute' },
-    { dep: 'Áncash', cap: 'Huaraz', atr: 'el Parque Nacional Huascarán', plato: 'el Picante de cuy ancashino' },
-    { dep: 'Apurímac', cap: 'Abancay', atr: 'el cañón del río Apurímac', plato: 'el Cuy relleno' },
-    { dep: 'Arequipa', cap: 'Arequipa', atr: 'el Cañón del Colca', plato: 'el Rocoto relleno' },
-    { dep: 'Ayacucho', cap: 'Ayacucho', atr: 'la Pampa de la Quinua', plato: 'la Puca picante' },
-    { dep: 'Cajamarca', cap: 'Cajamarca', atr: 'el Cuarto del Rescate', plato: 'el Caldo verde' },
-    { dep: 'Cusco', cap: 'Cusco', atr: 'el santuario histórico de Machu Picchu', plato: 'el Chiriuchu' },
-    { dep: 'Huancavelica', cap: 'Huancavelica', atr: 'la mina de Santa Bárbara', plato: 'la Sopa de mondongo' },
-    { dep: 'Huánuco', cap: 'Huánuco', atr: 'el templo de las Manos Cruzadas de Kotosh', plato: 'la Pachamanca huanuqueña' },
-    { dep: 'Ica', cap: 'Ica', atr: 'el oasis de Huacachina y Líneas de Nazca', plato: 'la Carapulcra con sopa seca' },
-    { dep: 'Junín', cap: 'Huancayo', atr: 'el nevado Huaytapallana', plato: 'la Papa a la huancaína' },
-    { dep: 'La Libertad', cap: 'Trujillo', atr: 'la ciudadela de barro de Chan Chan', plato: 'el Shámbar' },
-    { dep: 'Lambayeque', cap: 'Chiclayo', atr: 'el Museo Tumbas Reales de Sipán', plato: 'el Arroz con pato' },
-    { dep: 'Lima', cap: 'Lima', atr: 'la Plaza Mayor y Pachacámac', plato: 'el Ceviche tradicional' },
-    { dep: 'Loreto', cap: 'Iquitos', atr: 'la Reserva Nacional Pacaya Samiria', plato: 'el Juane de arroz' },
-    { dep: 'Madre de Dios', cap: 'Puerto Maldonado', atr: 'el Parque Nacional del Manu', plato: 'el Patarashca' },
-    { dep: 'Moquegua', cap: 'Moquegua', atr: 'el volcán Huaynaputina', plato: 'el Moqueguano de camarón' },
-    { dep: 'Pasco', cap: 'Cerro de Pasco', atr: 'el bosque de piedras de Huayllay', plato: 'el Caldo de cabeza' },
-    { dep: 'Piura', cap: 'Piura', atr: 'las playas de Máncora', plato: 'el Seco de chabelo' },
-    { dep: 'Puno', cap: 'Puno', atr: 'las islas flotantes de los Uros en el lago Titicaca', plato: 'el Chairo puneño' },
-    { dep: 'San Martín', cap: 'Moyobamba', atr: 'la catarata de Ahuashiyacu', plato: 'el Tacacho con cecina' },
-    { dep: 'Tacna', cap: 'Tacna', atr: 'el complejo monumental del Alto de la Alianza', plato: 'el Picante a la tacneña' },
-    { dep: 'Tumbes', cap: 'Tumbes', atr: 'el santuario nacional Los Manglares de Tumbes', plato: 'el Ceviche de conchas negras' },
-    { dep: 'Ucayali', cap: 'Pucallpa', atr: 'la laguna de Yarinacocha', plato: 'el Inchicapi de gallina' }
-  ];
+      db.run('BEGIN TRANSACTION');
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO ${tablaNombre} (
+          codigo_unico, tipo, categoria, subcategoria, dificultad,
+          pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta,
+          anio_min, anio_max, explicacion, ${colPaisORegion}, fuente_verificacion, fecha_referencia, estado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo')
+      `);
 
-  departamentosPeru.forEach((d, idx) => {
-    const otros = departamentosPeru.filter((_, i) => i !== idx).map(x => x.cap);
-    // Pregunta Capital
-    lista.push([
-      'opcion_multiple', 'cultura_peruana',
-      `¿Cuál es la capital del departamento de ${d.dep}?`,
-      d.cap, otros[0], otros[1], otros[2], 'A', null, null
-    ]);
+      preguntas.forEach(p => {
+        stmt.run([
+          p.codigo_unico,
+          p.tipo,
+          p.categoria,
+          p.subcategoria,
+          p.dificultad,
+          p.pregunta,
+          p.opcion_a,
+          p.opcion_b,
+          p.opcion_c,
+          p.opcion_d,
+          p.correcta,
+          p.anio_min,
+          p.anio_max,
+          p.explicacion,
+          p.region_referencia || p.pais_referencia || 'General',
+          p.fuente_verificacion,
+          p.fecha_referencia || '2026'
+        ]);
+      });
 
-    // Pregunta Atractivo
-    const otrosDep = departamentosPeru.filter((_, i) => i !== idx).map(x => x.dep);
-    lista.push([
-      'opcion_multiple', 'cultura_peruana',
-      `¿En qué departamento del Perú se encuentra ${d.atr}?`,
-      otrosDep[0], d.dep, otrosDep[1], otrosDep[2], 'B', null, null
-    ]);
-
-    // Pregunta Gastronomía
-    const otrosPlatos = departamentosPeru.filter((_, i) => i !== idx).map(x => x.plato);
-    lista.push([
-      'opcion_multiple', 'cultura_peruana',
-      `¿De qué departamento es tradicional y originario ${d.plato}?`,
-      otrosDep[0], otrosDep[1], d.dep, otrosDep[2], 'C', null, null
-    ]);
-  });
-
-  // Gobernantes y héroes del Perú
-  const personajesPeru = [
-    { nombre: 'Pachacútec', rol: 'el gran transformador e iniciador de la expansión del Tahuantinsuyo' },
-    { nombre: 'Manco Cápac', rol: 'el legendario fundador del Imperio de los Incas que emergió del Titicaca' },
-    { nombre: 'Túpac Yupanqui', rol: 'el inca navegante que llegó a las islas de la Polinesia' },
-    { nombre: 'Atahualpa', rol: 'el último gobernante inca capturado por Francisco Pizarro en Cajamarca' },
-    { nombre: 'José de San Martín', rol: 'el libertador que proclamó la Independencia del Perú en Lima en 1821' },
-    { nombre: 'Simón Bolívar', rol: 'el libertador venezolano que consolidó la independencia en Junín y Ayacucho' },
-    { nombre: 'Ramón Castilla', rol: 'el presidente peruano que decretó la abolición definitiva de la esclavitud' },
-    { nombre: 'Miguel Grau', rol: 'el Almirante y Caballero de los Mares, héroe del combate de Angamos' },
-    { nombre: 'Francisco Bolognesi', rol: 'el héroe que defendió Arica hasta quemar el último cartucho' },
-    { nombre: 'Alfonso Ugarte', rol: 'el militar que se lanzó al mar desde el Morro de Arica con la bandera nacional' },
-    { nombre: 'José Abelardo Quiñones', rol: 'el héroe de la aviación militar peruana inmolado en Quebrada Seca' }
-  ];
-
-  personajesPeru.forEach((p, idx) => {
-    const otrosP = personajesPeru.filter((_, i) => i !== idx).map(x => x.nombre);
-    lista.push([
-      'opcion_multiple', 'cultura_peruana',
-      `¿Quién fue ${p.rol}?`,
-      otrosP[0], otrosP[1], p.nombre, otrosP[2], 'C', null, null
-    ]);
-  });
-
-  // =========================================================================
-  // MATRIZ 2: GEOGRAFÍA MUNDIAL (CAPITALES Y PAÍSES)
-  // Genera más de 200 preguntas de geografía elemental
-  // =========================================================================
-  const paisesMundo = [
-    { p: 'Francia', c: 'París' }, { p: 'Italia', c: 'Roma' }, { p: 'España', c: 'Madrid' },
-    { p: 'Alemania', c: 'Berlín' }, { p: 'Reino Unido', c: 'Londres' }, { p: 'Rusia', c: 'Moscú' },
-    { p: 'Japón', c: 'Tokio' }, { p: 'China', c: 'Pekín' }, { p: 'Egipto', c: 'El Cairo' },
-    { p: 'Brasil', c: 'Brasilia' }, { p: 'Argentina', c: 'Buenos Aires' }, { p: 'Chile', c: 'Santiago' },
-    { p: 'Colombia', c: 'Bogotá' }, { p: 'México', c: 'Ciudad de México' }, { p: 'Canadá', c: 'Ottawa' },
-    { p: 'Australia', c: 'Canberra' }, { p: 'Grecia', c: 'Atenas' }, { p: 'Turquía', c: 'Ankara' },
-    { p: 'Portugal', c: 'Lisboa' }, { p: 'Países Bajos', c: 'Ámsterdam' }, { p: 'Bélgica', c: 'Bruselas' },
-    { p: 'Suiza', c: 'Berna' }, { p: 'Suecia', c: 'Estocolmo' }, { p: 'Noruega', c: 'Oslo' },
-    { p: 'India', c: 'Nueva Delhi' }, { p: 'Sudáfrica', c: 'Pretoria' }, { p: 'Uruguay', c: 'Montevideo' },
-    { p: 'Ecuador', c: 'Quito' }, { p: 'Bolivia', c: 'Sucre' }, { p: 'Paraguay', c: 'Asunción' }
-  ];
-
-  paisesMundo.forEach((item, idx) => {
-    const otrasCap = paisesMundo.filter((_, i) => i !== idx).map(x => x.c);
-    lista.push([
-      'opcion_multiple', 'geografia',
-      `¿Cuál es la capital oficial de ${item.p}?`,
-      item.c, otrasCap[0], otrasCap[1], otrasCap[2], 'A', null, null
-    ]);
-  });
-
-  // =========================================================================
-  // MATRIZ 3: CIENCIA Y QUÍMICA ELEMENTAL
-  // =========================================================================
-  const elementos = [
-    { n: 'Hidrógeno', s: 'H' }, { n: 'Helio', s: 'He' }, { n: 'Oxígeno', s: 'O' },
-    { n: 'Carbono', s: 'C' }, { n: 'Nitrógeno', s: 'N' }, { n: 'Oro', s: 'Au' },
-    { n: 'Plata', s: 'Ag' }, { n: 'Hierro', s: 'Fe' }, { n: 'Cobre', s: 'Cu' },
-    { n: 'Plomo', s: 'Pb' }, { n: 'Mercurio', s: 'Hg' }, { n: 'Sodio', s: 'Na' },
-    { n: 'Potasio', s: 'K' }, { n: 'Calcio', s: 'Ca' }, { n: 'Uranio', s: 'U' }
-  ];
-
-  elementos.forEach((el, idx) => {
-    const otrosS = elementos.filter((_, i) => i !== idx).map(x => x.s);
-    lista.push([
-      'opcion_multiple', 'ciencia',
-      `¿Cuál es el símbolo químico del elemento ${el.n}?`,
-      otrosS[0], el.s, otrosS[1], otrosS[2], 'B', null, null
-    ]);
-  });
-
-  // =========================================================================
-  // MATRIZ 4: DESEMPATE (PREGUNTAS DE AÑOS / APROXIMACIÓN)
-  // Genera más de 80 fechas históricas exactas para el desempate por diana
-  // =========================================================================
-  const fechasHistoricas = [
-    { evento: 'la Proclamación de la Independencia del Perú por José de San Martín', a: 1821, min: 1750, max: 1900 },
-    { evento: 'el Combate Naval de Angamos y sacrificio de Miguel Grau', a: 1879, min: 1800, max: 1920 },
-    { evento: 'la Batalla de Ayacucho que selló la independencia del Perú', a: 1824, min: 1750, max: 1880 },
-    { evento: 'el descubrimiento científico de Machu Picchu por Hiram Bingham', a: 1911, min: 1850, max: 1950 },
-    { evento: 'la fundación española de la ciudad de Lima por Francisco Pizarro', a: 1535, min: 1450, max: 1600 },
-    { evento: 'la Batalla de Junín', a: 1824, min: 1750, max: 1880 },
-    { evento: 'el Combate del 2 de Mayo en el Callao', a: 1866, min: 1800, max: 1900 },
-    { evento: 'la caída del Muro de Berlín', a: 1989, min: 1945, max: 2010 },
-    { evento: 'el inicio formal de la Primera Guerra Mundial', a: 1914, min: 1880, max: 1940 },
-    { evento: 'la finalización formal de la Segunda Guerra Mundial', a: 1945, min: 1920, max: 1970 },
-    { evento: 'el arribo de Cristóbal Colón a tierras del continente americano', a: 1492, min: 1400, max: 1600 },
-    { evento: 'la Toma de la Bastilla durante la Revolución Francesa', a: 1789, min: 1700, max: 1850 },
-    { evento: 'la llegada del primer hombre a la superficie lunar en el Apolo 11', a: 1969, min: 1940, max: 2000 },
-    { evento: 'el trágico hundimiento del trasatlántico Titanic', a: 1912, min: 1870, max: 1950 },
-    { evento: 'el estreno en cines de la película Titanic de James Cameron', a: 1997, min: 1980, max: 2015 },
-    { evento: 'el estreno en cines de Star Wars: Episodio IV (Una Nueva Esperanza)', a: 1977, min: 1960, max: 2000 },
-    { evento: 'el lanzamiento del primer teléfono inteligente iPhone por Apple', a: 2007, min: 1995, max: 2020 },
-    { evento: 'el primer Mundial de Fútbol disputado en Uruguay', a: 1930, min: 1900, max: 1960 },
-    { evento: 'el Mundial de Fútbol México 70 en el que brilló la selección peruana', a: 1970, min: 1950, max: 1990 },
-    { evento: 'la disolución formal de la Unión Soviética (URSS)', a: 1991, min: 1970, max: 2010 }
-  ];
-
-  fechasHistoricas.forEach(f => {
-    lista.push([
-      'aproximacion', 'historia_universal',
-      `¿En qué año ocurrió ${f.evento}?`,
-      '', '', '', '', f.a.toString(), f.min, f.max
-    ]);
-  });
-
-  // Multiplicador temático de refuerzo para superar las 1,000 preguntas
-  for (let ciclo = 1; ciclo <= 12; ciclo++) {
-    departamentosPeru.forEach((d, i) => {
-      lista.push([
-        'opcion_multiple', 'cultura_peruana',
-        `¿En cuál de estos departamentos se sitúa ${d.atr} (Registro ${ciclo}-${i})?`,
-        d.dep, 'Cusco', 'Arequipa', 'Lima', 'A', null, null
-      ]);
+      stmt.finalize();
+      db.run('COMMIT', (err) => {
+        if (err) return reject(err);
+        db.close(() => resolve(preguntas.length));
+      });
     });
-    paisesMundo.forEach((p, i) => {
-      lista.push([
-        'opcion_multiple', 'geografia',
-        `¿Qué ciudad es la capital soberana de ${p.p} (Registro ${ciclo}-${i})?`,
-        p.c, 'Roma', 'Madrid', 'Tokio', 'A', null, null
-      ]);
-    });
-  }
-
-  // Insertar todo en la base de datos
-  lista.forEach(p => stmt.run(p));
-  stmt.finalize();
-
-  db.get('SELECT COUNT(*) as total FROM preguntas', [], (err, row) => {
-    console.log(`=======================================================`);
-    console.log(`¡BASE DE DATOS INICIALIZADA! Total de preguntas: ${row.total}`);
-    console.log(`=======================================================`);
-    db.close();
   });
-});
+}
+
+async function ejecutarSeed() {
+  const schemaSQL = fs.readFileSync(schemaPath, 'utf8');
+  const preguntasPeru = [...generarBancoPeru(), ...generarExpansionPeru(500)];
+  const preguntasMundo = [...generarBancoMundo(), ...generarExpansionMundo(500)];
+
+  // 1. Inicializar Bases de Datos Físicas Independientes (Perú y Mundo)
+  await inicializarBaseIndependiente(dbPeruPath, 'preguntas_peru', preguntasPeru);
+  await inicializarBaseIndependiente(dbMundoPath, 'preguntas_mundo', preguntasMundo);
+
+  // 2. Inicializar Base de Datos Principal Unificada (preguntas.db)
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPrincipalPath);
+
+    db.exec(schemaSQL, (errSchema) => {
+      if (errSchema) {
+        console.error('Error ejecutando schema.sql:', errSchema);
+        return reject(errSchema);
+      }
+
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+
+        // Limpiar registros artificiales repetidos "(Registro X-Y)" de la tabla heredada
+        db.run(`DELETE FROM preguntas WHERE pregunta LIKE '%(Registro %'`);
+
+        // Poblar Dificultades
+        const stmtDif = db.prepare(`
+          INSERT OR REPLACE INTO dificultades (codigo, nombre, puntos_base, tropas_recompensa, penalizacion_puntos, multiplicador, activo)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
+        `);
+        DIFICULTADES.forEach(d => {
+          stmtDif.run([d.codigo, d.nombre, d.puntos_base, d.tropas_recompensa, d.penalizacion_puntos, d.multiplicador]);
+        });
+        stmtDif.finalize();
+
+        // Poblar Categorías
+        const stmtCat = db.prepare(`
+          INSERT OR REPLACE INTO categorias (codigo, nombre, ambito, subambito, icono, color, descripcion, es_especial, es_sorpresa, probabilidad, modos_compatibles, activa)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'todos', 1)
+        `);
+        CATEGORIAS.forEach(c => {
+          stmtCat.run([
+            c.codigo, c.nombre, c.ambito, c.subambito || 'General',
+            c.icono || '🎯', c.color || '#3a86ff', c.descripcion || '',
+            c.es_especial || 0, c.es_sorpresa || 0, c.probabilidad || 100
+          ]);
+        });
+        stmtCat.finalize();
+
+        // Poblar Comodines
+        const stmtCom = db.prepare(`
+          INSERT OR REPLACE INTO comodines_catalogo (
+            codigo, nombre, descripcion, icono, animacion, tipo,
+            cantidad_inicial, limite_maximo, probabilidad_aparicion, costo_monedas,
+            condiciones_uso, duracion_turnos, tiempo_reutilizacion, modos_compatibles,
+            activo, disponibilidad_nivel, efecto_combate, efecto_pregunta, efecto_mapa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        COMODINES_CATALOGO.forEach(cm => {
+          stmtCom.run([
+            cm.codigo, cm.nombre, cm.descripcion, cm.icono, cm.animacion, cm.tipo,
+            cm.cantidad_inicial, cm.limite_maximo, cm.probabilidad_aparicion, cm.costo_monedas,
+            cm.condiciones_uso, cm.duracion_turnos, cm.tiempo_reutilizacion, cm.modos_compatibles,
+            cm.activo, cm.disponibilidad_nivel, cm.efecto_combate, cm.efecto_pregunta, cm.efecto_mapa
+          ]);
+        });
+        stmtCom.finalize();
+
+        // Poblar Configuraciones (INSERT OR IGNORE para preservar ajustes personalizados del administrador)
+        const stmtCfg = db.prepare(`
+          INSERT OR IGNORE INTO configuraciones (clave, valor, tipo, grupo, descripcion)
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        CONFIGURACIONES_INICIALES.forEach(cfg => {
+          stmtCfg.run([cfg.clave, cfg.valor, cfg.tipo, cfg.grupo, cfg.descripcion]);
+        });
+        stmtCfg.finalize();
+
+        // Poblar Territorios y Conexiones
+        const stmtTer = db.prepare(`
+          INSERT OR REPLACE INTO territorios_catalogo (
+            codigo, mapa, nombre, region_continente, centro_x, centro_y, svg_path, tropas_iniciales, puntos_valor, bono_region
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        TERRITORIOS_CATALOGO.forEach(t => {
+          stmtTer.run([
+            t.codigo, t.mapa, t.nombre, t.region_continente,
+            t.centro_x, t.centro_y, t.svg_path, t.tropas_iniciales, t.puntos_valor, t.bono_region
+          ]);
+        });
+        stmtTer.finalize();
+
+        db.run(`DELETE FROM territorios_conexiones`);
+        const stmtCon = db.prepare(`
+          INSERT OR IGNORE INTO territorios_conexiones (mapa, territorio_origen, territorio_destino)
+          VALUES (?, ?, ?)
+        `);
+        CONEXIONES_PARES.forEach(([a, b]) => {
+          const m = (a.startsWith('PE_') && b.startsWith('PE_')) ? 'peru'
+            : (a.startsWith('MU_') && b.startsWith('MU_')) ? 'mundo'
+            : 'peru_mundo';
+          stmtCon.run([m, a, b]);
+          stmtCon.run([m, b, a]);
+        });
+        stmtCon.finalize();
+
+        // Poblar Banco Perú en la base unificada
+        const stmtPeru = db.prepare(`
+          INSERT OR REPLACE INTO preguntas_peru (
+            codigo_unico, tipo, categoria, subcategoria, dificultad,
+            pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta,
+            anio_min, anio_max, explicacion, region_referencia, fuente_verificacion, fecha_referencia, estado
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo')
+        `);
+        preguntasPeru.forEach(p => {
+          stmtPeru.run([
+            p.codigo_unico, p.tipo, p.categoria, p.subcategoria, p.dificultad,
+            p.pregunta, p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d, p.correcta,
+            p.anio_min, p.anio_max, p.explicacion, p.region_referencia, p.fuente_verificacion, p.fecha_referencia
+          ]);
+        });
+        stmtPeru.finalize();
+
+        // Poblar Banco Mundo en la base unificada
+        const stmtMundo = db.prepare(`
+          INSERT OR REPLACE INTO preguntas_mundo (
+            codigo_unico, tipo, categoria, subcategoria, dificultad,
+            pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta,
+            anio_min, anio_max, explicacion, pais_referencia, fuente_verificacion, fecha_referencia, estado
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo')
+        `);
+        preguntasMundo.forEach(p => {
+          stmtMundo.run([
+            p.codigo_unico, p.tipo, p.categoria, p.subcategoria, p.dificultad,
+            p.pregunta, p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d, p.correcta,
+            p.anio_min, p.anio_max, p.explicacion, p.pais_referencia, p.fuente_verificacion, p.fecha_referencia
+          ]);
+        });
+        stmtMundo.finalize();
+
+        // Sincronizar también en tabla `preguntas` para máxima compatibilidad
+        const stmtLegacy = db.prepare(`
+          INSERT OR REPLACE INTO preguntas (tipo, categoria, pregunta, opcion_a, opcion_b, opcion_c, opcion_d, correcta, anio_min, anio_max)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        [...preguntasPeru, ...preguntasMundo].forEach(p => {
+          stmtLegacy.run([
+            p.tipo, p.categoria, p.pregunta, p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d, p.correcta, p.anio_min || 1000, p.anio_max || 2026
+          ]);
+        });
+        stmtLegacy.finalize();
+
+        db.run('COMMIT', (errCommit) => {
+          if (errCommit) return reject(errCommit);
+          db.get('SELECT COUNT(*) AS cPeru FROM preguntas_peru', (e1, r1) => {
+            db.get('SELECT COUNT(*) AS cMundo FROM preguntas_mundo', (e2, r2) => {
+              db.get('SELECT COUNT(*) AS cCat FROM categorias', (e3, r3) => {
+                db.get('SELECT COUNT(*) AS cCom FROM comodines_catalogo', (e4, r4) => {
+                  const resumen = {
+                    preguntasPeru: r1 ? r1.cPeru : 0,
+                    preguntasMundo: r2 ? r2.cMundo : 0,
+                    totalPreguntas: (r1 ? r1.cPeru : 0) + (r2 ? r2.cMundo : 0),
+                    categorias: r3 ? r3.cCat : 0,
+                    comodines: r4 ? r4.cCom : 0
+                  };
+                  console.log('=======================================================');
+                  console.log('¡BASES DE DATOS INICIALIZADAS Y SINCRONIZADAS CON ÉXITO!');
+                  console.log(`- Banco Independiente Perú (preguntas_peru.db): ${resumen.preguntasPeru} preguntas`);
+                  console.log(`- Banco Independiente Mundo (preguntas_mundo.db): ${resumen.preguntasMundo} preguntas`);
+                  console.log(`- Total Preguntas Verificadas sin duplicados: ${resumen.totalPreguntas}`);
+                  console.log(`- Categorías activas: ${resumen.categorias} | Comodines: ${resumen.comodines}`);
+                  console.log('=======================================================');
+                  db.close(() => resolve(resumen));
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+}
+
+if (require.main === module) {
+  ejecutarSeed().catch(err => {
+    console.error('Error en seed:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { ejecutarSeed };

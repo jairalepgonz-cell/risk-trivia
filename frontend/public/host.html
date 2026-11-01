@@ -2,106 +2,679 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Trivia de Risk - Mesa Host</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triviador Mundo & Perú - Mesa Host y Mapa Estratégico Risk</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/soundEngine.js"></script>
   <style>
     :root {
       --rojo: #e63946;
       --azul: #3a86ff;
       --amarillo: #ffb703;
       --verde: #2a9d8f;
-      --negro: #343a40;
+      --negro: #495057;
+      --neutral: #475569;
       --gold: #ffd700;
+      --bg-dark: #070b14;
+      --panel-bg: #111927;
+      --border-col: #29384e;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Georgia', serif; }
-    body { background: #0b0f19; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; overflow-x: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, 'Georgia', sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #162238 0%, #070b14 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.8rem 1.2rem;
+      overflow-x: hidden;
+    }
     .hidden { display: none !important; }
 
-    #view-lobby { width: 95%; max-width: 1050px; background: #151d2d; border-radius: 14px; padding: 2rem; border: 2px solid #29384e; text-align: center; }
-    .host-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; background: #0e1520; padding: 1.2rem; border-radius: 8px; margin: 1.5rem 0; text-align: left; }
-    .host-settings label { font-size: 0.95rem; color: #ffb703; font-weight: bold; display: block; margin-bottom: 0.3rem; }
-    .host-settings input, .host-settings select { width: 100%; padding: 0.5rem; border-radius: 6px; border: none; font-size: 1rem; }
+    /* BARRA SUPERIOR DE NAVEGACIÓN Y CONTROL */
+    .top-nav {
+      width: 100%;
+      max-width: 1400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(17, 25, 39, 0.92);
+      border: 1px solid var(--border-col);
+      border-radius: 12px;
+      padding: 0.65rem 1.2rem;
+      margin-bottom: 0.8rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 0.5px;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .btn-top {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-top:hover { background: #334155; border-color: var(--gold); transform: translateY(-1px); }
+    .btn-top.gold { background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; border: none; }
 
-    .qr-box img { width: 130px; height: 130px; border: 4px solid white; border-radius: 8px; margin: 0.8rem auto; display: block; }
-    .player-cards { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
-    .player-tag { padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 0.8rem; }
-    .btn-kick { background: rgba(0,0,0,0.4); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; }
+    /* VISTA PRINCIPAL: LOBBY + MAPA ESTRATÉGICO RISK */
+    #view-lobby {
+      width: 100%;
+      max-width: 1400px;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      #view-lobby { grid-template-columns: 1fr; }
+    }
 
-    /* DUELO ESTILO TRIVIADOR */
-    #view-battle { width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center; position: relative; }
+    .main-map-card {
+      background: var(--panel-bg);
+      border: 2px solid var(--border-col);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
 
-    .header-duel-bar { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
-    .btn-abort { background: #d90429; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .turn-banner-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0b111e;
+      border: 2px solid #2e4057;
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    #lobby-status {
+      font-size: 1.15rem;
+      color: var(--amarillo);
+      font-weight: 800;
+    }
+    .consecutive-badge {
+      background: #1e293b;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 800;
+    }
 
-    .time-bar-container { width: 100%; height: 16px; background: #222b3c; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; border: 2px solid #3e4c63; }
-    .time-bar { height: 100%; width: 100%; background: #2a9d8f; transition: width 1s linear, background-color 0.5s; }
+    /* CONTENEDOR DEL MAPA INTERACTIVO SVG */
+    .map-viewport {
+      width: 100%;
+      height: 520px;
+      background: radial-gradient(circle at center, #0f2537 0%, #07131e 100%);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    #risk-map-svg {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      transition: transform 0.25s ease-out;
+    }
+    #risk-map-svg:active { cursor: grabbing; }
+
+    .map-divider-label {
+      fill: rgba(255, 215, 0, 0.22);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      pointer-events: none;
+    }
+
+    .connection-line {
+      stroke: rgba(148, 163, 184, 0.35);
+      stroke-width: 2;
+      stroke-dasharray: 5, 5;
+      pointer-events: none;
+    }
+    .connection-line.attack-route {
+      stroke: #ffd700;
+      stroke-width: 3.5;
+      stroke-dasharray: 6, 4;
+      animation: dashMove 1s linear infinite;
+    }
+    @keyframes dashMove {
+      to { stroke-dashoffset: -20; }
+    }
+
+    .territory-poly {
+      stroke: #0f172a;
+      stroke-width: 2.5;
+      cursor: pointer;
+      transition: filter 0.2s, stroke 0.2s, stroke-width 0.2s;
+      opacity: 0.9;
+    }
+    .territory-poly:hover {
+      filter: brightness(1.25);
+      stroke: #fff;
+      stroke-width: 3.5;
+    }
+    .territory-poly.attackable-highlight {
+      stroke: #ffd700;
+      stroke-width: 3.5;
+      animation: pulseBorder 1.5s infinite alternate;
+    }
+    .territory-poly.under-attack {
+      stroke: #ff0055;
+      stroke-width: 5;
+      filter: drop-shadow(0 0 14px #ff0055);
+    }
+    .territory-poly.conquered-flash {
+      animation: conquestFlash 1.2s ease-out;
+    }
+    @keyframes pulseBorder {
+      from { filter: drop-shadow(0 0 2px #ffd700); }
+      to { filter: drop-shadow(0 0 10px #ffd700) brightness(1.15); }
+    }
+    @keyframes conquestFlash {
+      0% { filter: brightness(2.5) drop-shadow(0 0 25px #ffd700); }
+      100% { filter: brightness(1); }
+    }
+
+    .territory-label {
+      fill: #ffffff;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-anchor: middle;
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: #000000;
+      stroke-width: 3px;
+    }
+    .troop-badge-bg {
+      stroke: #ffffff;
+      stroke-width: 1.8;
+      pointer-events: none;
+    }
+    .troop-badge-txt {
+      fill: #ffffff;
+      font-size: 11.5px;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    /* CONTROLES FLOTANTES DEL MAPA (ZOOM / LEYENDA / INFO TERRITORIO) */
+    .map-controls-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      gap: 0.4rem;
+      z-index: 10;
+    }
+    .btn-map-ctrl {
+      background: rgba(15, 23, 42, 0.88);
+      color: #fff;
+      border: 1px solid #475569;
+      padding: 0.4rem 0.7rem;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-map-ctrl:hover { border-color: var(--gold); }
+
+    .territory-inspector {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      min-width: 230px;
+      z-index: 10;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    }
+
+    /* AJUSTES Y CONFIGURACIÓN DEL HOST */
+    .host-settings {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 0.75rem;
+      background: #0b111e;
+      padding: 0.9rem;
+      border-radius: 10px;
+      margin-top: 0.85rem;
+      border: 1px solid #1e293b;
+      text-align: left;
+    }
+    .host-settings label {
+      font-size: 0.82rem;
+      color: #ffb703;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .host-settings input, .host-settings select {
+      width: 100%;
+      padding: 0.45rem;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #162032;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    /* COLUMNA DERECHA: JUGADORES, QR Y BITÁCORA DE GUERRA */
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+    .side-card {
+      background: var(--panel-bg);
+      border: 2px solid var(--border-col);
+      border-radius: 14px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .qr-box img {
+      width: 115px;
+      height: 115px;
+      border: 3px solid white;
+      border-radius: 8px;
+      margin: 0.5rem auto;
+      display: block;
+    }
+    .player-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 0.6rem;
+    }
+    .player-tag {
+      padding: 0.55rem 0.85rem;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    }
+    .player-stats-mini {
+      font-size: 0.78rem;
+      opacity: 0.92;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .btn-kick {
+      background: rgba(0,0,0,0.45);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .war-log-list {
+      max-height: 175px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .war-log-item {
+      background: #0b111e;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      border-left: 3px solid var(--gold);
+      color: #cbd5e1;
+    }
+
+    /* =====================================================================
+       PANTALLA DE DUELO Y COMBATE ANIMADO ESTILO TRIVIADOR MUNDO
+       ===================================================================== */
+    #view-battle {
+      width: 100%;
+      max-width: 1180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .header-duel-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.6rem;
+      background: #111927;
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      border: 1px solid #29384e;
+    }
+    .duel-meta-badges {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .meta-pill {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      background: #1e293b;
+      border: 1px solid #475569;
+    }
+    .btn-abort {
+      background: #d90429;
+      color: white;
+      border: none;
+      padding: 0.5rem 1.1rem;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .time-bar-container {
+      width: 100%;
+      height: 16px;
+      background: #222b3c;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      border: 2px solid #3e4c63;
+    }
+    .time-bar {
+      height: 100%;
+      width: 100%;
+      background: #2a9d8f;
+      transition: width 1s linear, background-color 0.5s;
+    }
     .time-bar.danger { background: #e63946 !important; }
 
     .pergamino {
-      background: #fbf2c4; color: #523912; border: 5px solid #c7a75c; border-radius: 10px;
-      padding: 1.2rem 2rem; width: 100%; text-align: center; position: relative; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-      font-size: 1.6rem; font-weight: bold; min-height: 120px; display: flex; align-items: center; justify-content: center;
-      white-space: pre-line; line-height: 1.35;
+      background: linear-gradient(180deg, #fdf5d2 0%, #f3e2a9 100%);
+      color: #432c0a;
+      border: 5px solid #b89146;
+      border-radius: 12px;
+      padding: 1.4rem 2rem;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      font-size: 1.55rem;
+      font-weight: bold;
+      min-height: 115px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      white-space: pre-line;
+      line-height: 1.35;
     }
     .badge-tiempo {
-      position: absolute; top: -18px; background: #e63946; color: white; padding: 0.2rem 1.4rem;
-      border-radius: 20px; font-size: 1.2rem; font-weight: bold; border: 2px solid white;
+      position: absolute;
+      top: -18px;
+      background: #e63946;
+      color: white;
+      padding: 0.2rem 1.4rem;
+      border-radius: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: 2px solid white;
     }
 
-    .battle-center { display: flex; width: 100%; margin-top: 1.5rem; gap: 1.5rem; align-items: center; }
-    .soldier-panel {
-      width: 190px; background: #192333; border-radius: 10px; padding: 1.2rem; text-align: center;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; border: 4px solid transparent;
+    .battle-center {
+      display: flex;
+      width: 100%;
+      margin-top: 1.2rem;
+      gap: 1.2rem;
+      align-items: stretch;
     }
-    .soldier-avatar { font-size: 4.5rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
-    .soldier-name { font-size: 1.3rem; font-weight: bold; margin-top: 0.5rem; }
+    .soldier-panel {
+      width: 225px;
+      background: #151f30;
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      border: 4px solid transparent;
+      position: relative;
+      transition: transform 0.3s;
+    }
+    .soldier-panel.clash-anim {
+      animation: soldierClash 0.6s ease-in-out;
+    }
+    @keyframes soldierClash {
+      0%, 100% { transform: translateX(0) scale(1); }
+      50% { transform: scale(1.08); filter: brightness(1.3); }
+    }
+    .soldier-avatar {
+      font-size: 4rem;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    }
+    .soldier-name {
+      font-size: 1.25rem;
+      font-weight: 900;
+      margin-top: 0.3rem;
+    }
+    .army-troops-row {
+      display: flex;
+      gap: 0.25rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 0.5rem 0;
+      font-size: 1.35rem;
+    }
+    .territory-chip {
+      background: rgba(0,0,0,0.35);
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      width: 100%;
+    }
 
     /* Opciones Madera */
-    .options-stack { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; justify-content: center; }
+    .options-stack {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      justify-content: center;
+    }
     .wood-option {
-      background: #ece3cc; color: #2b1f0d !important; border: 4px solid #7c5828; border-radius: 8px;
-      padding: 0.8rem 1.2rem; font-size: 1.2rem; font-weight: bold; transition: all 0.3s; line-height: 1.3;
+      background: #ece3cc;
+      color: #2b1f0d !important;
+      border: 4px solid #7c5828;
+      border-radius: 8px;
+      padding: 0.8rem 1.2rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: all 0.3s;
+      line-height: 1.3;
     }
     .wood-option.voted-rojo { background: var(--rojo) !important; color: white !important; }
     .wood-option.voted-azul { background: var(--azul) !important; color: white !important; }
     .wood-option.voted-amarillo { background: var(--amarillo) !important; color: black !important; }
     .wood-option.voted-verde { background: var(--verde) !important; color: white !important; }
     .wood-option.voted-negro { background: var(--negro) !important; color: white !important; }
-    .wood-option.gold-correct { border: 5px solid var(--gold) !important; box-shadow: 0 0 25px var(--gold); transform: scale(1.02); }
+    .wood-option.gold-correct {
+      border: 5px solid var(--gold) !important;
+      box-shadow: 0 0 25px var(--gold);
+      transform: scale(1.02);
+    }
+
+    /* Explicación verificada post-duelo */
+    #explanation-box {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #38bdf8;
+      border-radius: 10px;
+      padding: 0.85rem 1.2rem;
+      margin-top: 1rem;
+      text-align: left;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
 
     /* DIANA TRIVIADOR */
     .diana-container {
-      flex: 1; height: 320px; background: #111722; border-radius: 16px; border: 3px solid #7c5828;
-      position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      flex: 1;
+      height: 320px;
+      background: #111722;
+      border-radius: 16px;
+      border: 3px solid #7c5828;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
     .target-svg { width: 100%; height: 100%; }
-
     .center-target-value {
-      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-      background: #fbf2c4; border: 3px solid #7c5828; border-radius: 8px;
-      padding: 0.4rem 1.5rem; color: #523912; font-size: 2.2rem; font-weight: 900;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5;
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fbf2c4;
+      border: 3px solid #7c5828;
+      border-radius: 8px;
+      padding: 0.4rem 1.5rem;
+      color: #523912;
+      font-size: 2.2rem;
+      font-weight: 900;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 5;
     }
-
     .player-guess-tag {
-      position: absolute; bottom: 15px; padding: 0.5rem 1rem; border-radius: 8px;
-      border: 3px solid; font-weight: 900; font-size: 1.3rem; background: #fff;
-      display: flex; gap: 0.8rem; align-items: center; z-index: 6; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      position: absolute;
+      bottom: 15px;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 3px solid;
+      font-weight: 900;
+      font-size: 1.3rem;
+      background: #fff;
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+      z-index: 6;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
     .guess-left { left: 20px; }
     .guess-right { right: 20px; }
     .time-chip { font-size: 0.85rem; color: #555; font-family: monospace; }
 
     #winner-banner {
-      width: 100%; background: linear-gradient(90deg, #d90429, #f77f00);
-      color: #fff; text-align: center; font-size: 1.8rem; font-weight: 900;
-      padding: 1rem; border-radius: 10px; border: 4px solid #ffd700;
-      margin-bottom: 1.2rem; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      width: 100%;
+      background: linear-gradient(90deg, #d90429, #f77f00);
+      color: #fff;
+      text-align: center;
+      font-size: 1.55rem;
+      font-weight: 900;
+      padding: 0.9rem;
+      border-radius: 10px;
+      border: 4px solid #ffd700;
+      margin-bottom: 0.9rem;
+      display: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
     }
 
     #banner-alert {
-      position: fixed; top: 15px; background: #f77f00; color: white; padding: 0.8rem 2rem;
-      border-radius: 30px; font-size: 1.3rem; font-weight: bold; border: 2px solid white; display: none; z-index: 100;
+      position: fixed;
+      top: 15px;
+      background: linear-gradient(90deg, #f77f00, #d90429);
+      color: white;
+      padding: 0.8rem 2rem;
+      border-radius: 30px;
+      font-size: 1.25rem;
+      font-weight: bold;
+      border: 2px solid white;
+      display: none;
+      z-index: 200;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+
+    /* MODAL DE RULETA DE CATEGORÍAS DE TV */
+    #tv-wheel-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+    }
+    .tv-wheel-card {
+      background: #111927;
+      border: 3px solid var(--gold);
+      border-radius: 18px;
+      padding: 1.8rem;
+      max-width: 650px;
+      width: 92%;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.35);
+    }
+    .tv-cat-slots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.8rem;
+      margin: 1.2rem 0;
+    }
+    .tv-cat-slot {
+      background: #1e293b;
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 1rem;
+      font-weight: 800;
+      transition: all 0.2s;
+    }
+    .tv-cat-slot.active-spin {
+      border-color: var(--gold);
+      background: #3b2f0b;
+      transform: scale(1.06);
+      box-shadow: 0 0 20px var(--gold);
     }
   </style>
 </head>
@@ -109,51 +682,159 @@
 
   <div id="banner-alert"></div>
 
-  <!-- PANTALLA LOBBY -->
-  <div id="view-lobby">
-    <h1 style="color: #ffb703; font-size: 2.2rem;">Trivia de Risk - Mesa Host</h1>
-    <div class="qr-box"><img id="qr-img" src="" alt="QR"></div>
-    <p id="url-text" style="color: #64b5f6; font-family: monospace; font-size: 1.1rem;"></p>
+  <!-- BARRA SUPERIOR -->
+  <nav class="top-nav">
+    <div class="brand-title">
+      <span>🌍⚔️🇵🇪</span>
+      <span>TRIVIADOR MUNDO & PERÚ — MESA HOST</span>
+    </div>
+    <div class="top-actions">
+      <button class="btn-top" id="btn-open-wheel" title="Ruleta de Categorías estilo Concurso de TV">🎡 Ruleta TV de Categorías</button>
+      <button class="btn-top" id="btn-reset-map" title="Repartir nuevamente los territorios">🔄 Reiniciar Mapa</button>
+      <button class="btn-top" id="btn-sound-toggle">🔊 Sonido: ON</button>
+      <a href="/player.html" target="_blank" class="btn-top">📱 Abrir Vista Jugador</a>
+      <a href="/admin.html" target="_blank" class="btn-top gold">⚙️ Panel de Administración</a>
+    </div>
+  </nav>
 
-    <div class="host-settings">
-      <div>
-        <label>Comodines:</label>
-        <select id="cfg-comodines-on">
-          <option value="true">Activos</option>
-          <option value="false">Desactivados</option>
-        </select>
+  <!-- PANTALLA LOBBY Y MAPA INTERACTIVO RISK -->
+  <div id="view-lobby">
+    <!-- IZQUIERDA: MAPA INTERACTIVO Y CONTROLES -->
+    <div class="main-map-card">
+      <div class="turn-banner-bar">
+        <div id="lobby-status">🎯 Esperando comandantes para iniciar la conquista...</div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <span class="consecutive-badge" id="badge-ronda">Ronda 1</span>
+          <span class="consecutive-badge" id="badge-consecutivo">Ataques en turno: 0 / 5</span>
+        </div>
       </div>
-      <div>
-        <label>Comodines c/u:</label>
-        <input type="number" id="cfg-cant-comodines" value="3" min="1" max="5">
+
+      <!-- MAPA TERRITORIAL INTERACTIVO ESTILO RISK / TRIVIADOR -->
+      <div class="map-viewport" id="map-viewport">
+        <svg id="risk-map-svg" viewBox="0 0 1040 620" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <filter id="glow-shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.65"/>
+            </filter>
+          </defs>
+          <g id="map-pan-zoom-group">
+            <!-- Fondo decorativo de teatros geográficos -->
+            <rect x="20" y="25" width="485" height="580" rx="16" fill="rgba(230, 57, 70, 0.05)" stroke="rgba(230, 57, 70, 0.25)" stroke-dasharray="8,6"/>
+            <text x="260" y="50" class="map-divider-label" text-anchor="middle">🇵🇪 TEATRO PERÚ (REGIONES)</text>
+
+            <rect x="515" y="25" width="505" height="580" rx="16" fill="rgba(58, 134, 255, 0.05)" stroke="rgba(58, 134, 255, 0.25)" stroke-dasharray="8,6"/>
+            <text x="765" y="50" class="map-divider-label" text-anchor="middle">🌍 TEATRO MUNDIAL (CONTINENTES)</text>
+
+            <g id="map-connections-layer"></g>
+            <g id="map-territories-layer"></g>
+            <g id="map-badges-layer"></g>
+          </g>
+        </svg>
+
+        <!-- Controles de Zoom y Desplazamiento -->
+        <div class="map-controls-overlay">
+          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(0.2)">➕ Zoom</button>
+          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(-0.2)">➖ Zoom</button>
+          <button class="btn-map-ctrl" onclick="resetearVistaMapa()">🎯 Centrar</button>
+        </div>
+
+        <!-- Inspector de Territorio Seleccionado y Acción Directa -->
+        <div class="territory-inspector" id="territory-inspector">
+          <div style="font-size:0.78rem; color:#94a3b8; text-transform:uppercase;">Territorio Seleccionado</div>
+          <div id="insp-name" style="font-size:1.1rem; font-weight:900; color:var(--gold); margin:0.15rem 0;">Haz clic en un territorio</div>
+          <div id="insp-owner" style="font-size:0.88rem; color:#e2e8f0;">Propietario: —</div>
+          <div id="insp-troops" style="font-size:0.88rem; color:#38bdf8; margin-bottom:0.5rem;">Guarnición: —</div>
+          <button id="btn-map-attack-now" class="hidden" style="width:100%; padding:0.45rem; background:#e63946; color:#fff; border:none; border-radius:6px; font-weight:800; cursor:pointer;">
+            ⚔️ ¡Atacar este Territorio!
+          </button>
+        </div>
       </div>
-      <div>
-        <label>Tiempo (seg):</label>
-        <input type="number" id="cfg-tiempo" value="20" min="5" max="60">
-      </div>
-      <div>
-        <label>¿Quién Inicia?</label>
-        <select id="cfg-primer-turno">
-          <option value="aleatorio">Aleatorio</option>
-        </select>
-      </div>
-      <div style="display: flex; align-items: flex-end;">
-        <button id="btn-aplicar-cfg" style="width:100%; padding:0.6rem; background:#2a9d8f; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-          Guardar configuración
-        </button>
+
+      <!-- CONFIGURACIÓN RÁPIDA EN MESA HOST -->
+      <div class="host-settings">
+        <div>
+          <label>Mapa Activo:</label>
+          <select id="cfg-modo-mapa">
+            <option value="peru_mundo">Perú + Mundo (Global)</option>
+            <option value="peru">Solo Mapa del Perú 🇵🇪</option>
+            <option value="mundo">Solo Mapa Mundial 🌍</option>
+          </select>
+        </div>
+        <div>
+          <label>Banco de Preguntas:</label>
+          <select id="cfg-banco-preg">
+            <option value="mixto">Mixto (Perú + Mundo)</option>
+            <option value="peru">Exclusivo Perú 🇵🇪</option>
+            <option value="mundo">Exclusivo Mundo 🌍</option>
+          </select>
+        </div>
+        <div>
+          <label>Comodines:</label>
+          <select id="cfg-comodines-on">
+            <option value="true">Activos (14 tipos)</option>
+            <option value="false">Desactivados</option>
+          </select>
+        </div>
+        <div>
+          <label>Comodines base c/u:</label>
+          <input type="number" id="cfg-cant-comodines" value="3" min="1" max="5">
+        </div>
+        <div>
+          <label>Tiempo (seg):</label>
+          <input type="number" id="cfg-tiempo" value="20" min="5" max="60">
+        </div>
+        <div>
+          <label>Máx. Ataques Seguidos:</label>
+          <input type="number" id="cfg-max-ataques" value="5" min="1" max="12">
+        </div>
+        <div>
+          <label>¿Quién Inicia?</label>
+          <select id="cfg-primer-turno">
+            <option value="aleatorio">Aleatorio</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button id="btn-aplicar-cfg" style="width:100%; padding:0.55rem; background:#2a9d8f; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+            💾 Guardar Reglas
+          </button>
+        </div>
       </div>
     </div>
 
-    <h3>Comandantes Conectados:</h3>
-    <div class="player-cards" id="lobby-players"></div>
-    <div id="lobby-status" style="margin-top: 1.5rem; font-size: 1.3rem; color: #ffb703; font-weight: bold;"></div>
+    <!-- DERECHA: QR, JUGADORES Y BITÁCORA DE MOVIMIENTOS -->
+    <div class="side-column">
+      <div class="side-card">
+        <h3 style="color: #ffb703; font-size: 1.05rem;">📱 Escanea para Unirte</h3>
+        <div class="qr-box"><img id="qr-img" src="" alt="QR"></div>
+        <p id="url-text" style="color: #64b5f6; font-family: monospace; font-size: 0.85rem; word-break: break-all;"></p>
+      </div>
+
+      <div class="side-card">
+        <h3 style="color: #ffb703; font-size: 1.05rem;">👑 Imperios en Campaña</h3>
+        <div class="player-cards" id="lobby-players"></div>
+      </div>
+
+      <div class="side-card">
+        <h3 style="color: #38bdf8; font-size: 1rem;">📜 Crónica de Conquistas</h3>
+        <div class="war-log-list" id="war-log-list">
+          <div class="war-log-item">Esperando el primer movimiento estratégico...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- PANTALLA DUELO -->
+  <!-- PANTALLA DUELO Y COMBATE VISUAL -->
   <div id="view-battle" class="hidden">
     <div class="header-duel-bar">
-      <span style="color:#ffb703; font-weight:bold;">⚔️ Combate en curso</span>
-      <button class="btn-abort" id="btn-abort-match">⏹️ Terminar Juego / Volver al Lobby</button>
+      <div class="duel-meta-badges">
+        <span style="color:#ffb703; font-weight:900;">⚔️ COMBATE TERRITORIAL</span>
+        <span class="meta-pill" id="duel-badge-territory">📍 Territorio</span>
+        <span class="meta-pill" id="duel-badge-bank">🇵🇪 / 🌍 Banco</span>
+        <span class="meta-pill" id="duel-badge-cat">📚 Categoría</span>
+        <span class="meta-pill" id="duel-badge-diff">⭐ Nivel</span>
+        <span class="meta-pill" id="duel-badge-streak">🔥 Ataque #1</span>
+      </div>
+      <button class="btn-abort" id="btn-abort-match">⏹️ Volver al Mapa / Lobby</button>
     </div>
 
     <div id="winner-banner"></div>
@@ -168,10 +849,13 @@
     </div>
 
     <div class="battle-center">
+      <!-- PANEL EJÉRCITO ATACANTE -->
       <div class="soldier-panel" id="panel-at">
-        <div class="soldier-avatar">⚔️</div>
+        <span style="color:#ffb703; font-size:0.85rem; font-weight:900;">⚔️ EJÉRCITO ATACANTE</span>
+        <div class="soldier-avatar" id="avatar-at">⚔️</div>
         <div class="soldier-name" id="name-at">Atacante</div>
-        <span style="color:#ffb703; font-size:0.9rem;">ATACANTE</span>
+        <div class="army-troops-row" id="troops-icons-at">💂💂💂</div>
+        <div class="territory-chip" id="territory-at-lbl">Desde: Base</div>
       </div>
 
       <!-- Opción Múltiple -->
@@ -214,29 +898,47 @@
         </div>
       </div>
 
+      <!-- PANEL EJÉRCITO DEFENSOR -->
       <div class="soldier-panel" id="panel-def">
-        <div class="soldier-avatar">🛡️</div>
+        <span style="color:#38bdf8; font-size:0.85rem; font-weight:900;">🛡️ GUARNICIÓN DEFENSORA</span>
+        <div class="soldier-avatar" id="avatar-def">🛡️</div>
         <div class="soldier-name" id="name-def">Defensor</div>
-        <span style="color:#ffb703; font-size:0.9rem;">DEFENSOR</span>
+        <div class="army-troops-row" id="troops-icons-def">💂💂</div>
+        <div class="territory-chip" id="territory-def-lbl">Defiende: Territorio</div>
+      </div>
+    </div>
+
+    <!-- Explicación verificada de la respuesta -->
+    <div id="explanation-box" class="hidden"></div>
+  </div>
+
+  <!-- MODAL RULETA DE CATEGORÍAS DE TELEVISIÓN -->
+  <div id="tv-wheel-modal" class="hidden">
+    <div class="tv-wheel-card">
+      <h2 style="color:var(--gold); font-size:1.7rem;">🎡 Ruleta de Categorías de Televisión</h2>
+      <p style="color:#94a3b8; margin-top:0.3rem;">Sorteo dinámico de categorías de Perú, Mundo y Rondas Especiales</p>
+      <div class="tv-cat-slots" id="tv-cat-slots"></div>
+      <div id="tv-wheel-winner" style="font-size:1.3rem; font-weight:900; color:#2dd4bf; min-height:2rem; margin-bottom:1rem;"></div>
+      <div style="display:flex; gap:0.8rem; justify-content:center;">
+        <button id="btn-spin-now" style="padding:0.7rem 1.5rem; background:var(--gold); color:#000; border:none; border-radius:8px; font-weight:900; cursor:pointer;">
+          🎰 ¡GIRAR RULETA!
+        </button>
+        <button id="btn-close-wheel" style="padding:0.7rem 1.4rem; background:#334155; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+          Cerrar
+        </button>
       </div>
     </div>
   </div>
 
   <script>
-    let audioCtx = null;
-    function playBeep(freq = 600, duration = 0.08) {
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.value = freq;
-        gain.gain.value = 0.1;
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
+    const COLOR_HEX = {
+      rojo: '#e63946',
+      azul: '#3a86ff',
+      amarillo: '#ffb703',
+      verde: '#2a9d8f',
+      negro: '#495057',
+      neutral: '#475569'
+    };
 
     const socket = io();
     const viewLobby = document.getElementById('view-lobby');
@@ -246,26 +948,93 @@
     const lobbyPlayers = document.getElementById('lobby-players');
     const selPrimerTurno = document.getElementById('cfg-primer-turno');
     const hostTimeBar = document.getElementById('host-time-bar');
+    const explanationBox = document.getElementById('explanation-box');
 
-    socket.on('info_servidor', () => {
-      const renderUrl = 'https://risk-trivia.onrender.com/player.html';
-      document.getElementById('url-text').textContent = renderUrl;
-      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(renderUrl)}`;
+    let estadoMapaActual = null;
+    let territorioSeleccionado = null;
+
+    // Estado de Zoom y Desplazamiento (Pan) del Mapa
+    let mapZoom = 1;
+    let mapPanX = 0;
+    let mapPanY = 0;
+    let isDraggingMap = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    const svgMap = document.getElementById('risk-map-svg');
+    const panZoomGroup = document.getElementById('map-pan-zoom-group');
+
+    function aplicarTransformacionMapa() {
+      panZoomGroup.setAttribute('transform', `translate(${mapPanX}, ${mapPanY}) scale(${mapZoom})`);
+    }
+    window.ajustarZoomMapa = function(delta) {
+      mapZoom = Math.min(2.6, Math.max(0.75, mapZoom + delta));
+      aplicarTransformacionMapa();
+    };
+    window.resetearVistaMapa = function() {
+      mapZoom = 1;
+      mapPanX = 0;
+      mapPanY = 0;
+      aplicarTransformacionMapa();
+    };
+
+    svgMap.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('territory-poly')) return;
+      isDraggingMap = true;
+      dragStartX = e.clientX - mapPanX;
+      dragStartY = e.clientY - mapPanY;
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingMap) return;
+      mapPanX = e.clientX - dragStartX;
+      mapPanY = e.clientY - dragStartY;
+      aplicarTransformacionMapa();
+    });
+    window.addEventListener('mouseup', () => { isDraggingMap = false; });
+
+    // Botón de Sonido
+    const btnSound = document.getElementById('btn-sound-toggle');
+    function actualizarBotonSonido() {
+      btnSound.textContent = window.soundFX.enabled ? '🔊 Sonido: ON' : '🔇 Sonido: OFF';
+    }
+    actualizarBotonSonido();
+    btnSound.addEventListener('click', () => {
+      window.soundFX.toggle();
+      actualizarBotonSonido();
     });
 
+    // Información del Servidor y QR dinámico
+    socket.on('info_servidor', ({ ip, port }) => {
+      const originUrl = window.location.origin.includes('localhost')
+        ? `http://${ip}:${port}/player.html`
+        : `${window.location.origin}/player.html`;
+      document.getElementById('url-text').textContent = originUrl;
+      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
+    });
+
+    // Guardar configuración desde Mesa Host
     document.getElementById('btn-aplicar-cfg').addEventListener('click', () => {
       socket.emit('guardar_configuracion', {
+        modoMapa: document.getElementById('cfg-modo-mapa').value,
+        modoBancoPreguntas: document.getElementById('cfg-banco-preg').value,
         comodinesHabilitados: document.getElementById('cfg-comodines-on').value === 'true',
         cantComodines: document.getElementById('cfg-cant-comodines').value,
-        tiempo: document.getElementById('cfg-tiempo').value
+        tiempo: document.getElementById('cfg-tiempo').value,
+        maxAtaquesConsecutivos: document.getElementById('cfg-max-ataques').value
       });
       socket.emit('fijar_primer_turno', { colorOId: selPrimerTurno.value });
-      mostrarAlerta('Ajustes guardados.');
+      window.soundFX.play('select');
+      mostrarAlerta('⚙️ Reglas y configuración actualizadas.');
     });
 
-    // Botón para abortar el combate en cualquier momento
+    document.getElementById('btn-reset-map').addEventListener('click', () => {
+      if (confirm('¿Reiniciar la campaña y repartir nuevamente todos los territorios?')) {
+        socket.emit('reiniciar_mapa_partida');
+      }
+    });
+
     document.getElementById('btn-abort-match').addEventListener('click', () => {
-      if (confirm('¿Terminar el combate actual y volver al Lobby?')) {
+      if (confirm('¿Terminar el combate actual y volver al Mapa Estratégico?')) {
         socket.emit('forzar_terminar_juego');
       }
     });
@@ -273,18 +1042,166 @@
     socket.on('juego_cancelado_por_host', () => {
       viewBattle.classList.add('hidden');
       viewLobby.classList.remove('hidden');
-      mostrarAlerta('Combate terminado por el Host.');
+      mostrarAlerta('Combate finalizado por el Host.');
     });
 
+    // =====================================================================
+    // RENDERIZADO DEL MAPA INTERACTIVO ESTILO RISK / TRIVIADOR
+    // =====================================================================
+    socket.on('mapa_actualizado', (estado) => {
+      estadoMapaActual = estado;
+      renderizarMapaInteractivo(estado);
+      renderizarBitacora(estado.historialMovimientos || []);
+      document.getElementById('badge-ronda').textContent = `Ronda ${estado.rondaActual || 1} / ${estado.rondasMaximas || 12}`;
+      document.getElementById('badge-consecutivo').textContent =
+        `Ataques en turno: ${estado.ataquesRealizados || 0} / ${estado.maxAtaquesConsecutivos || 5}`;
+    });
+
+    function renderizarMapaInteractivo(estado) {
+      const connLayer = document.getElementById('map-connections-layer');
+      const terrLayer = document.getElementById('map-territories-layer');
+      const badgeLayer = document.getElementById('map-badges-layer');
+
+      connLayer.innerHTML = '';
+      terrLayer.innerHTML = '';
+      badgeLayer.innerHTML = '';
+
+      const mapaTer = {};
+      (estado.territorios || []).forEach(t => { mapaTer[t.codigo] = t; });
+      const atacables = new Set(estado.territoriosAtacables || []);
+
+      // 1. Dibujar líneas de conexión entre territorios vecinos
+      const paresDibujados = new Set();
+      (estado.territorios || []).forEach(t => {
+        (t.vecinos || []).forEach(vecCod => {
+          const v = mapaTer[vecCod];
+          if (!v) return;
+          const parKey = [t.codigo, v.codigo].sort().join('--');
+          if (paresDibujados.has(parKey)) return;
+          paresDibujados.add(parKey);
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', t.centroX);
+          line.setAttribute('y1', t.centroY);
+          line.setAttribute('x2', v.centroX);
+          line.setAttribute('y2', v.centroY);
+          const esRutaAtaque = (t.propietarioColor === estado.atacanteColor && atacables.has(v.codigo)) ||
+                               (v.propietarioColor === estado.atacanteColor && atacables.has(t.codigo));
+          line.setAttribute('class', esRutaAtaque ? 'connection-line attack-route' : 'connection-line');
+          connLayer.appendChild(line);
+        });
+      });
+
+      // 2. Dibujar polígonos de territorios y medallas de soldados
+      (estado.territorios || []).forEach(t => {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', t.svgPath);
+        path.setAttribute('fill', COLOR_HEX[t.propietarioColor] || COLOR_HEX.neutral);
+        path.setAttribute('filter', 'url(#glow-shadow)');
+
+        let cls = 'territory-poly';
+        if (atacables.has(t.codigo)) cls += ' attackable-highlight';
+        if (t.bajoAtaque) cls += ' under-attack';
+        path.setAttribute('class', cls);
+        path.dataset.codigo = t.codigo;
+
+        path.addEventListener('click', () => seleccionarTerritorioEnHost(t));
+        terrLayer.appendChild(path);
+
+        // Nombre del territorio
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', t.centroX);
+        label.setAttribute('y', t.centroY - 16);
+        label.setAttribute('class', 'territory-label');
+        label.textContent = t.nombre;
+        badgeLayer.appendChild(label);
+
+        // Círculo indicador de tropas
+        const badgeCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        badgeCircle.setAttribute('cx', t.centroX);
+        badgeCircle.setAttribute('cy', t.centroY + 4);
+        badgeCircle.setAttribute('r', 14);
+        badgeCircle.setAttribute('fill', '#0f172a');
+        badgeCircle.setAttribute('class', 'troop-badge-bg');
+        badgeLayer.appendChild(badgeCircle);
+
+        const troopTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        troopTxt.setAttribute('x', t.centroX);
+        troopTxt.setAttribute('y', t.centroY + 4);
+        troopTxt.setAttribute('class', 'troop-badge-txt');
+        const extras = `${t.esCapital ? '👑' : ''}${t.escudoActivo ? '🛡️' : ''}${t.proteccionTurnos > 0 ? '🏰' : ''}`;
+        troopTxt.textContent = `${t.soldados}${extras}`;
+        badgeLayer.appendChild(troopTxt);
+      });
+    }
+
+    function seleccionarTerritorioEnHost(ter) {
+      territorioSeleccionado = ter;
+      window.soundFX.play('select');
+      socket.emit('seleccionar_territorio_mapa', { territorioCodigo: ter.codigo });
+
+      document.getElementById('insp-name').textContent = `${ter.mapa === 'peru' ? '🇵🇪' : '🌍'} ${ter.nombre}`;
+      document.getElementById('insp-owner').textContent = `Imperio: ${ter.propietarioNombre} (${ter.propietarioColor.toUpperCase()})`;
+      document.getElementById('insp-troops').textContent = `Soldados: ${ter.soldados} 💂 | Valor: +${ter.puntosValor} pts`;
+
+      const btnAttackNow = document.getElementById('btn-map-attack-now');
+      const esAtacable = estadoMapaActual &&
+        estadoMapaActual.atacanteColor &&
+        ter.propietarioColor !== estadoMapaActual.atacanteColor;
+
+      if (esAtacable) {
+        btnAttackNow.classList.remove('hidden');
+        btnAttackNow.onclick = () => {
+          window.soundFX.play('attack');
+          socket.emit('declarar_ataque', {
+            territorioObjetivo: ter.codigo,
+            defensorColor: ter.propietarioColor,
+            categoriaDeseada: 'aleatorio',
+            usoComodinTema: false
+          });
+        };
+      } else {
+        btnAttackNow.classList.add('hidden');
+      }
+    }
+
+    function renderizarBitacora(movimientos) {
+      const list = document.getElementById('war-log-list');
+      if (!movimientos || movimientos.length === 0) return;
+      list.innerHTML = movimientos.map(m => `
+        <div class="war-log-item" style="border-left-color: ${COLOR_HEX[m.jugadorColor] || '#ffd700'};">
+          <span style="color:#64748b; font-size:0.74rem;">[${m.hora}]</span> ${m.descripcion}
+        </div>
+      `).join('');
+    }
+
+    // Renderizar Comandantes y Estadísticas en vivo
     socket.on('actualizacion_jugadores', (jugadores) => {
       lobbyPlayers.innerHTML = '';
+      const prevVal = selPrimerTurno.value;
       selPrimerTurno.innerHTML = '<option value="aleatorio">Aleatorio</option>';
+
+      if (jugadores.length === 0) {
+        lobbyPlayers.innerHTML = '<p style="color:#64748b; font-size:0.9rem;">Esperando que los comandantes escaneen el QR...</p>';
+        return;
+      }
+
       jugadores.forEach(j => {
         const tag = document.createElement('div');
         tag.className = 'player-tag';
         tag.style.backgroundColor = `var(--${j.color})`;
         tag.style.color = (j.color === 'amarillo') ? '#000' : '#fff';
-        tag.innerHTML = `<span>${j.nombre}</span> <button class="btn-kick" onclick="kick('${j.id}')">×</button>`;
+        tag.innerHTML = `
+          <div style="text-align:left;">
+            <div>${j.nombre}</div>
+            <div class="player-stats-mini">
+              <span>🏳️ ${j.territoriosCount || 0} terr.</span>
+              <span>💂 ${j.soldadosTotales || 0}</span>
+              <span>🏆 ${j.puntos || 0} pts</span>
+            </div>
+          </div>
+          <button class="btn-kick" title="Expulsar" onclick="kick('${j.id}')">×</button>
+        `;
         lobbyPlayers.appendChild(tag);
 
         const opt = document.createElement('option');
@@ -292,20 +1209,80 @@
         opt.textContent = `${j.nombre} (${j.color.toUpperCase()})`;
         selPrimerTurno.appendChild(opt);
       });
+      if (prevVal) selPrimerTurno.value = prevVal;
     });
 
     window.kick = function(socketId) { socket.emit('expulsar_jugador', { socketId }); };
 
-    socket.on('turno_actualizado', ({ atacanteNombre, atacanteColor }) => {
+    socket.on('turno_actualizado', ({ atacanteNombre, atacanteColor, ataquesRealizados, maxAtaquesConsecutivos }) => {
       if (atacanteNombre) {
-        document.getElementById('lobby-status').textContent = `🎯 Turno: ${atacanteNombre} (${atacanteColor.toUpperCase()}). Declara tu ataque en el móvil.`;
+        const extraMsg = ataquesRealizados > 0
+          ? ` — 🔥 ¡Racha de conquista activa (${ataquesRealizados}/${maxAtaquesConsecutivos})! Puede seguir atacando o finalizar turno.`
+          : ' — Selecciona un territorio enemigo en el móvil o en el mapa.';
+        document.getElementById('lobby-status').textContent =
+          `🎯 Turno: ${atacanteNombre} (${atacanteColor.toUpperCase()})${extraMsg}`;
       }
     });
 
+    // RULETA DE CATEGORÍAS ESTILO TV
+    const tvModal = document.getElementById('tv-wheel-modal');
+    document.getElementById('btn-open-wheel').addEventListener('click', () => {
+      tvModal.classList.remove('hidden');
+      socket.emit('girar_ruleta_categorias');
+    });
+    document.getElementById('btn-close-wheel').addEventListener('click', () => {
+      tvModal.classList.add('hidden');
+    });
+    document.getElementById('btn-spin-now').addEventListener('click', () => {
+      socket.emit('girar_ruleta_categorias');
+    });
+
+    socket.on('ruleta_categorias_resultado', ({ opciones, ganadora }) => {
+      window.soundFX.play('wheel');
+      const container = document.getElementById('tv-cat-slots');
+      const winnerTxt = document.getElementById('tv-wheel-winner');
+      winnerTxt.textContent = 'Girando la ruleta televisiva...';
+
+      container.innerHTML = (opciones || []).map((c, idx) => `
+        <div class="tv-cat-slot" id="tv-slot-${idx}">
+          <div style="font-size:2rem;">${c.icono || '🎯'}</div>
+          <div style="margin-top:0.3rem;">${c.nombre}</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.2rem;">${(c.ambito || '').toUpperCase()}</div>
+        </div>
+      `).join('');
+
+      let step = 0;
+      const totalSteps = 12;
+      const interval = setInterval(() => {
+        document.querySelectorAll('.tv-cat-slot').forEach(el => el.classList.remove('active-spin'));
+        const idx = step % Math.max(1, opciones.length);
+        const slot = document.getElementById(`tv-slot-${idx}`);
+        if (slot) slot.classList.add('active-spin');
+        step++;
+        if (step >= totalSteps) {
+          clearInterval(interval);
+          document.querySelectorAll('.tv-cat-slot').forEach((el, i) => {
+            el.classList.toggle('active-spin', opciones[i]?.codigo === ganadora.codigo);
+          });
+          winnerTxt.textContent = `🎉 ¡Categoría Seleccionada: ${ganadora.icono || '🎯'} ${ganadora.nombre}!`;
+        }
+      }, 110);
+    });
+
+    // =====================================================================
+    // COMIENZO Y RESOLUCIÓN DEL DUELO CON SOLDADOS ANIMADOS
+    // =====================================================================
+    function renderizarIconosSoldados(cantidad, icono = '💂') {
+      const n = Math.max(0, Math.min(8, parseInt(cantidad) || 0));
+      return n > 0 ? icono.repeat(n) + (cantidad > 8 ? ` +${cantidad - 8}` : '') : '💀 0';
+    }
+
     socket.on('comenzar_duelo', (datos) => {
+      window.soundFX.play('attack');
       viewLobby.classList.add('hidden');
       viewBattle.classList.remove('hidden');
       winnerBanner.style.display = 'none';
+      explanationBox.classList.add('hidden');
 
       const isAprox = datos.pregunta.tipo === 'aproximacion';
       document.getElementById('options-multi').classList.toggle('hidden', isAprox);
@@ -315,7 +1292,7 @@
         const el = document.getElementById(`box-${o}`);
         el.className = 'wood-option';
         el.style.background = '';
-        el.style.color = '#2b1f0d'; // <--- Limpieza garantizada de color
+        el.style.color = '#2b1f0d';
       });
 
       document.getElementById('target-exact-val').textContent = '?';
@@ -324,10 +1301,23 @@
       document.getElementById('tag-guess-at').style.display = 'none';
       document.getElementById('tag-guess-def').style.display = 'none';
 
+      // Metadatos del duelo y pregunta
+      document.getElementById('duel-badge-territory').textContent = `📍 Objetivo: ${datos.defensor.territorioNombre || 'Territorio'}`;
+      document.getElementById('duel-badge-bank').textContent = datos.pregunta.banco === 'peru' ? '🇵🇪 Banco Perú' : '🌍 Banco Mundial';
+      document.getElementById('duel-badge-cat').textContent = `📚 ${(datos.pregunta.categoria || 'general').replace(/_/g, ' ').toUpperCase()}`;
+      document.getElementById('duel-badge-diff').textContent = `⭐ Nivel: ${(datos.pregunta.dificultad || 'basico').toUpperCase()}`;
+      document.getElementById('duel-badge-streak').textContent = `🔥 Asalto #${datos.ataqueConsecutivoNum || 1} de ${datos.maxAtaquesConsecutivos || 5}`;
+
+      // Paneles de soldados atacante y defensor
       document.getElementById('name-at').textContent = datos.atacante.nombre;
       document.getElementById('panel-at').style.borderColor = `var(--${datos.atacante.color})`;
+      document.getElementById('troops-icons-at').textContent = renderizarIconosSoldados(datos.atacante.soldados || 3, '⚔️');
+      document.getElementById('territory-at-lbl').textContent = `Desde: ${datos.atacante.territorioNombre || 'Base'}`;
+
       document.getElementById('name-def').textContent = datos.defensor.nombre;
       document.getElementById('panel-def').style.borderColor = `var(--${datos.defensor.color})`;
+      document.getElementById('troops-icons-def').textContent = renderizarIconosSoldados(datos.defensor.soldados || 2, '🛡️');
+      document.getElementById('territory-def-lbl').textContent = `Defiende: ${datos.defensor.territorioNombre || 'Territorio'}`;
 
       document.getElementById('question-text').textContent = datos.pregunta.pregunta;
       if (!isAprox) {
@@ -340,26 +1330,65 @@
 
     socket.on('tick_tiempo', ({ tiempo, total }) => {
       document.getElementById('timer-badge').textContent = `${tiempo}s`;
-      const pct = (tiempo / total) * 100;
+      const pct = Math.min(100, (tiempo / total) * 100);
       hostTimeBar.style.width = `${pct}%`;
 
       if (tiempo <= 5) {
         hostTimeBar.classList.add('danger');
-        playBeep(450, 0.08);
+        window.soundFX.play('tick');
       } else {
         hostTimeBar.classList.remove('danger');
       }
     });
 
-    socket.on('alerta_comodin_publico', ({ mensaje }) => mostrarAlerta(mensaje));
+    socket.on('alerta_comodin_publico', ({ mensaje, animacion }) => {
+      if (animacion === 'hammer-smash') window.soundFX.play('hammer');
+      else window.soundFX.play('comodin');
+      mostrarAlerta(mensaje);
+    });
     socket.on('alerta_desempate', (m) => mostrarAlerta(m));
 
     socket.on('fin_duelo', (res) => {
-      playBeep(880, 0.4);
+      document.getElementById('panel-at').classList.add('clash-anim');
+      document.getElementById('panel-def').classList.add('clash-anim');
+      setTimeout(() => {
+        document.getElementById('panel-at').classList.remove('clash-anim');
+        document.getElementById('panel-def').classList.remove('clash-anim');
+      }, 700);
+
+      // Resumen de combate territorial (soldados y conquista)
+      let subTerritorial = '';
+      if (res.combateTerritorial) {
+        const ct = res.combateTerritorial;
+        if (ct.territorioOrigen) {
+          document.getElementById('troops-icons-at').textContent = renderizarIconosSoldados(ct.territorioOrigen.soldadosDespues, '⚔️');
+        }
+        if (ct.territorioObjetivo) {
+          document.getElementById('troops-icons-def').textContent = renderizarIconosSoldados(ct.territorioObjetivo.soldadosDespues, '🛡️');
+        }
+
+        if (ct.territorioConquistado && ct.territorioObjetivo) {
+          window.soundFX.play('conquest');
+          subTerritorial = `<br><span style="color:#ffd700; font-size:1.15rem;">🏴 ¡TERRITORIO CONQUISTADO: ${ct.territorioObjetivo.nombre.toUpperCase()}!</span>`;
+        } else if (ct.defensaExitosa && ct.territorioObjetivo) {
+          window.soundFX.play('defense');
+          subTerritorial = `<br><span style="color:#38bdf8; font-size:1.1rem;">🛡️ ¡DEFENSA EXITOSA EN ${ct.territorioObjetivo.nombre.toUpperCase()}! (-${ct.bajasAtacante} tropa atacante)</span>`;
+        } else if (ct.bajasDefensor > 0 && ct.territorioObjetivo) {
+          window.soundFX.play('correct');
+          subTerritorial = `<br><span style="color:#fcd34d; font-size:1.05rem;">💥 Guarnición de ${ct.territorioObjetivo.nombre} pierde ${ct.bajasDefensor} soldado(s).</span>`;
+        }
+      } else {
+        window.soundFX.play('correct');
+      }
+
+      if (res.turnoContinua) {
+        subTerritorial += `<br><span style="font-size:0.95rem; color:#a7f3d0;">⚡ ¡Fase de Ataque Consecutivo activa! ${res.atacante.nombre} conserva el turno para seguir atacando.</span>`;
+      }
 
       if (res.ganador) {
-        winnerBanner.innerHTML = `🏆 ¡VICTORIA DE ${res.ganador.nombre.toUpperCase()}! <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
+        winnerBanner.innerHTML = `🏆 ¡VICTORIA DE ${res.ganador.nombre.toUpperCase()}! <br><span style="font-size:1.05rem; font-weight:normal;">${res.motivo}</span>${subTerritorial}`;
         winnerBanner.style.background = `linear-gradient(90deg, var(--${res.ganador.color}), #f77f00)`;
+        winnerBanner.style.color = '#fff';
         winnerBanner.style.display = 'block';
       } else if (res.requiereDesempate) {
         winnerBanner.innerHTML = `⚖️ ¡EMPATE! <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
@@ -367,10 +1396,17 @@
         winnerBanner.style.color = '#000';
         winnerBanner.style.display = 'block';
       } else {
-        winnerBanner.innerHTML = `⚖️ RONDA TERMINADA <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
+        window.soundFX.play('wrong');
+        winnerBanner.innerHTML = `🛡️ ASALTO RECHAZADO <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
         winnerBanner.style.background = '#475569';
         winnerBanner.style.color = '#fff';
         winnerBanner.style.display = 'block';
+      }
+
+      // Mostrar explicación verificada de la respuesta correcta
+      if (res.explicacion) {
+        explanationBox.innerHTML = `💡 <strong>Dato Verificado:</strong> ${res.explicacion}`;
+        explanationBox.classList.remove('hidden');
       }
 
       if (res.tipo === 'aproximacion') {
@@ -420,8 +1456,13 @@
         setTimeout(() => {
           viewBattle.classList.add('hidden');
           viewLobby.classList.remove('hidden');
-        }, 6500);
+        }, 6000);
       }
+    });
+
+    socket.on('victoria_partida', ({ ganador, motivo }) => {
+      window.soundFX.play('victory');
+      mostrarAlerta(`👑 ¡VICTORIA IMPERIAL DE ${ganador.nombre.toUpperCase()}! ${motivo}`);
     });
 
     function posicionarFlecha(lado, diff, color, targetX, startX) {
@@ -458,7 +1499,7 @@
     function mostrarAlerta(msg) {
       bannerAlert.textContent = msg;
       bannerAlert.style.display = 'block';
-      setTimeout(() => bannerAlert.style.display = 'none', 3500);
+      setTimeout(() => bannerAlert.style.display = 'none', 4000);
     }
   </script>
 </body>
