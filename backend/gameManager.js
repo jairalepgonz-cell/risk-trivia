@@ -2,16 +2,16 @@ const {
   TERRITORIOS_CATALOGO,
   CONEXIONES_PARES,
   COMODINES_CATALOGO,
-  CONFIGURACIONES_INICIALES
+  TABLA_CANJE_ESTRELLAS_RISK
 } = require('./database/catalogData');
 
 const COLORES = ['rojo', 'azul', 'amarillo', 'verde', 'negro'];
 
 class GameManager {
   constructor() {
-    this.estado = 'LOBBY'; // 'LOBBY', 'MAPA_ESTRATEGICO', 'SELECCION_CATEGORIA', 'DUELO', 'DESEMPATE', 'VICTORIA'
+    this.estado = 'LOBBY';
     this.jugadores = {};
-    this.perfilesDesconectados = {}; // Guarda estado por color/nombre para reconexión limpia
+    this.perfilesDesconectados = {};
     this.ordenTurnos = [];
     this.indiceTurnoActual = 0;
     this.rondaActual = 1;
@@ -19,7 +19,9 @@ class GameManager {
     this.categoriasRecientes = [];
     this.historialMovimientos = [];
 
-    // Configuración persistente y parametrizable
+    // Mazo de las 42 tarjetas oficiales de Risk con ★ 1 o ★★ 2 estrellas
+    this.mazoTarjetasRisk = [];
+
     this.configuracion = {
       comodinesHabilitados: true,
       martillosPorJugador: 3,
@@ -28,44 +30,41 @@ class GameManager {
       tiempoPorPregunta: 20,
       puntosRespuestaCorrecta: 150,
       penalizacionRespuestaIncorrecta: 30,
-      soldadosInicialesPorTerritorio: 2,
-      refuerzosPorRonda: 2,
-      maxAtaquesConsecutivos: 5,
-      bajasPorDerrotaDefensor: 2,
+      soldadosInicialesPorTerritorio: 1,
+      refuerzosPorRonda: 3,
+      maxAtaquesConsecutivos: 15,
+      bajasPorDerrotaDefensor: 1,
       bajasPorDerrotaAtacante: 1,
-      requiereVecindadParaAtacar: true,
+      requiereVecindadParaAtacar: false, // Desactivado por defecto: se juega en el tablero físico de mesa
       permitirAtaquesConsecutivos: true,
-      modoMapa: 'peru_mundo',      // 'peru', 'mundo', 'peru_mundo'
+      modoInicioTablero: 'tarjetas_estrellas', // 'tarjetas_estrellas' (Por suerte ★1/★★2), 'eleccion_mapa' (Elegir lugar), 'libre'
+      modoMapa: 'risk',
       modoBancoPreguntas: 'mixto', // 'peru', 'mundo', 'mixto'
       modoSeleccionCategorias: 'tv_show',
-      dificultadProgresiva: true,
-      condicionVictoria: 'dominacion_o_puntos',
-      rondasMaximasPartida: 12,
+      dificultadProgresiva: false,
+      condicionVictoria: 'tablero_fisico',
+      rondasMaximasPartida: 20,
       sonidosHabilitados: true,
       animacionesHabilitadas: true
     };
 
-    // Catálogo dinámico de comodines cargado desde BD
     this.catalogoComodines = {};
     COMODINES_CATALOGO.forEach(c => {
       this.catalogoComodines[c.codigo] = { ...c };
     });
 
-    // Estado del turno actual (soporta ataques consecutivos estilo Risk)
     this.turnoEstado = {
       atacanteId: null,
       ataquesRealizados: 0,
       conquistasEnTurno: 0,
-      puedeSeguirAtacando: true,
-      refuerzosRecibidos: false
+      ganaTarjetaEnEsteTurno: false,
+      puedeSeguirAtacando: true
     };
 
-    // Estado del mapa interactivo de territorios
     this.territorios = {};
     this.conexiones = {};
-    this.inicializarEstructuraMapa('peru_mundo');
+    this.inicializarEstructuraMapa();
 
-    // Estado del duelo activo
     this.dueloActual = {
       atacanteId: null,
       defensorId: null,
@@ -78,49 +77,62 @@ class GameManager {
     };
 
     this.tiempoInicioPregunta = null;
-    this.tiempoRestanteSegundos = 20;
   }
 
   cargarDesdeBaseDeDatos(configMapa = {}, listaComodines = []) {
     Object.assign(this.configuracion, configMapa);
+    // Garantizar que el tablero físico nunca bloquee ataques por vecindad digital a menos que se fuerce explícitamente
+    if (configMapa.requiereVecindadParaAtacar === undefined) {
+      this.configuracion.requiereVecindadParaAtacar = false;
+    }
     if (listaComodines && listaComodines.length > 0) {
       this.catalogoComodines = {};
       listaComodines.forEach(c => {
         this.catalogoComodines[c.codigo] = { ...c };
       });
     }
-    this.inicializarEstructuraMapa(this.configuracion.modoMapa || 'peru_mundo');
+    this.inicializarEstructuraMapa();
   }
 
-  inicializarEstructuraMapa(modoMapa = 'peru_mundo') {
-    this.configuracion.modoMapa = modoMapa;
+  inicializarMazoTarjetasRisk() {
+    this.mazoTarjetasRisk = TERRITORIOS_CATALOGO.map(t => ({
+      codigo: t.codigo,
+      nombre: t.nombre,
+      continente: t.region_continente,
+      estrellas: t.tropas_iniciales || 1, // ★ 1 estrella (1 soldado) o ★★ 2 estrellas (2 soldados)
+      tipoUnidad: (t.tropas_iniciales === 2) ? 'Caballería / Artillería (★★ 2 soldados)' : 'Infantería (★ 1 soldado)'
+    })).sort(() => Math.random() - 0.5);
+  }
+
+  robarTarjetaRisk() {
+    if (this.mazoTarjetasRisk.length === 0) {
+      this.inicializarMazoTarjetasRisk();
+    }
+    return this.mazoTarjetasRisk.pop();
+  }
+
+  inicializarEstructuraMapa() {
     this.territorios = {};
     this.conexiones = {};
+    this.inicializarMazoTarjetasRisk();
 
-    const filtrados = TERRITORIOS_CATALOGO.filter(t => {
-      if (modoMapa === 'peru') return t.mapa === 'peru';
-      if (modoMapa === 'mundo') return t.mapa === 'mundo';
-      return true;
-    });
-
-    filtrados.forEach(t => {
+    TERRITORIOS_CATALOGO.forEach(t => {
+      const estrellas = t.tropas_iniciales || 1; // 1 o 2 estrellas en la tarjeta oficial de Risk
       this.territorios[t.codigo] = {
         codigo: t.codigo,
         nombre: t.nombre,
-        mapa: t.mapa,
+        mapa: 'risk',
         regionContinente: t.region_continente,
         centroX: t.centro_x,
         centroY: t.centro_y,
-        svgPath: t.svg_path,
-        puntosValor: t.puntos_valor || 150,
-        bonoRegion: t.bono_region || 2,
+        estrellasTarjeta: estrellas, // ★ 1 o ★★ 2
+        bonoRegion: t.bono_region || 3,
         propietarioId: null,
-        propietarioNombre: 'Guarnición Neutral',
+        propietarioNombre: 'Sin ocupar',
         propietarioColor: 'neutral',
-        soldados: this.configuracion.soldadosInicialesPorTerritorio || 2,
+        soldados: estrellas,
         escudoActivo: false,
         proteccionTurnos: 0,
-        esCapital: false,
         bajoAtaque: false,
         vecinos: []
       };
@@ -136,47 +148,88 @@ class GameManager {
       }
     });
 
-    this.repartirTerritorios();
+    this.repartirTerritoriosPorModo(this.configuracion.modoInicioTablero);
   }
 
-  repartirTerritorios() {
+  // =========================================================================
+  // MODOS DE PREPARACIÓN DEL TABLERO FÍSICO DE RISK:
+  // 1. 'tarjetas_estrellas': Reparte al azar las 42 tarjetas entre los jugadores;
+  //    cada territorio recibe ★ 1 soldado o ★★ 2 soldados según las estrellas de su tarjeta.
+  // 2. 'eleccion_mapa': Deja los 42 territorios listos para que cada jugador elija
+  //    en qué lugar del mapa quiere estar (desde la pantalla o el celular).
+  // =========================================================================
+  repartirTerritoriosPorModo(modo = 'tarjetas_estrellas') {
+    this.configuracion.modoInicioTablero = modo;
     const listaJugadores = Object.values(this.jugadores);
     const codigos = Object.keys(this.territorios);
     if (codigos.length === 0) return;
 
-    const tropasInit = parseInt(this.configuracion.soldadosInicialesPorTerritorio) || 2;
-
-    if (listaJugadores.length === 0) {
+    if (modo === 'eleccion_mapa' || listaJugadores.length === 0) {
+      // Todos los territorios quedan libres para ser elegidos por los jugadores
       codigos.forEach(cod => {
         const t = this.territorios[cod];
         t.propietarioId = null;
-        t.propietarioNombre = 'Guarnición Neutral';
+        t.propietarioNombre = 'Libre para elegir';
         t.propietarioColor = 'neutral';
-        t.soldados = tropasInit;
+        t.soldados = t.estrellasTarjeta || 1;
         t.escudoActivo = false;
         t.proteccionTurnos = 0;
-        t.esCapital = false;
         t.bajoAtaque = false;
       });
+      this.recalcularEstadisticasTerritoriales();
       return;
     }
 
-    // Reparto equitativo en espiral/round-robin entre los jugadores conectados
-    codigos.forEach((cod, idx) => {
+    // Modo 'tarjetas_estrellas': Barajar las 42 tarjetas de Risk por suerte
+    const codigosBarajados = [...codigos].sort(() => Math.random() - 0.5);
+    codigosBarajados.forEach((cod, idx) => {
       const jug = listaJugadores[idx % listaJugadores.length];
       const t = this.territorios[cod];
       t.propietarioId = jug.id;
       t.propietarioNombre = jug.nombre;
       t.propietarioColor = jug.color;
-      t.soldados = tropasInit;
+      // Soldados iniciales según las estrellas de la tarjeta de Risk (★ = 1 soldado, ★★ = 2 soldados)
+      t.soldados = t.estrellasTarjeta || 1;
       t.escudoActivo = false;
       t.proteccionTurnos = 0;
       t.bajoAtaque = false;
-      t.esCapital = idx < listaJugadores.length;
-      if (t.esCapital) t.soldados = tropasInit + 1;
     });
 
     this.recalcularEstadisticasTerritoriales();
+    this.registrarMovimiento(
+      'Mesa Host',
+      'gold',
+      'SORTEO_TARJETAS',
+      null,
+      null,
+      `🎲 Se repartieron por suerte las 42 Tarjetas de Risk (con ★ 1 o ★★ 2 soldados por tarjeta) para colocar en el tablero físico.`
+    );
+  }
+
+  // Permite elegir o cambiar el dueño y soldados de cualquier territorio del mapa clásico de Risk
+  asignarTerritorioManual(territorioCodigo, colorJugador, soldados = null) {
+    const t = this.territorios[territorioCodigo];
+    if (!t) return { exito: false, error: 'Territorio no encontrado.' };
+
+    if (!colorJugador || colorJugador === 'neutral') {
+      t.propietarioId = null;
+      t.propietarioNombre = 'Libre';
+      t.propietarioColor = 'neutral';
+      t.soldados = soldados !== null ? parseInt(soldados) : (t.estrellasTarjeta || 1);
+    } else {
+      const jug = Object.values(this.jugadores).find(j => j.color === colorJugador);
+      t.propietarioId = jug ? jug.id : null;
+      t.propietarioNombre = jug ? jug.nombre : `Ejército ${colorJugador.toUpperCase()}`;
+      t.propietarioColor = colorJugador;
+      if (soldados !== null && !isNaN(parseInt(soldados))) {
+        t.soldados = Math.max(1, parseInt(soldados));
+      } else if (t.soldados <= 0) {
+        t.soldados = t.estrellasTarjeta || 1;
+      }
+    }
+
+    this.recalcularEstadisticasTerritoriales();
+    return { exito: true, territorio: t };
   }
 
   recalcularEstadisticasTerritoriales() {
@@ -184,6 +237,13 @@ class GameManager {
       const misTer = Object.values(this.territorios).filter(t => t.propietarioColor === j.color);
       j.territoriosCount = misTer.length;
       j.soldadosTotales = misTer.reduce((acc, t) => acc + t.soldados, 0);
+      j.misTerritoriosIniciales = misTer.map(t => ({
+        codigo: t.codigo,
+        nombre: t.nombre,
+        continente: t.regionContinente,
+        estrellas: t.estrellasTarjeta,
+        soldados: t.soldados
+      }));
       misTer.forEach(t => {
         t.propietarioId = j.id;
         t.propietarioNombre = j.nombre;
@@ -204,7 +264,6 @@ class GameManager {
       }
     });
 
-    // Garantizar compatibilidad directa con claves clásicas: martillo, loro, tema
     inv.martillo = habilitados ? baseCant : 0;
     inv.loro = habilitados ? baseCant : 0;
     inv.tema = habilitados ? (this.configuracion.temasPorJugador || baseCant) : 0;
@@ -221,11 +280,9 @@ class GameManager {
   registrarJugador(socketId, nombre, color) {
     const nombreLimpio = (nombre || '').trim() || `Comandante ${String(color).toUpperCase()}`;
 
-    // Verificar si es una reconexión de un jugador con el mismo color o nombre
     const existenteMismoColor = Object.values(this.jugadores).find(j => j.color === color);
     if (existenteMismoColor) {
       if (existenteMismoColor.nombre.toLowerCase() === nombreLimpio.toLowerCase()) {
-        // Reconexión directa: migrar estado al nuevo socketId
         const antiguoId = existenteMismoColor.id;
         delete this.jugadores[antiguoId];
         existenteMismoColor.id = socketId;
@@ -236,7 +293,6 @@ class GameManager {
         if (this.dueloActual.atacanteId === antiguoId) this.dueloActual.atacanteId = socketId;
         if (this.dueloActual.defensorId === antiguoId) this.dueloActual.defensorId = socketId;
         this.recalcularEstadisticasTerritoriales();
-        this.registrarMovimiento(nombreLimpio, color, 'RECONEXION', null, null, `${nombreLimpio} se reconectó a la partida.`);
         return { exito: true, jugador: existenteMismoColor, reconectado: true };
       }
       return { exito: false, error: 'Color ocupado por otro comandante.' };
@@ -244,7 +300,6 @@ class GameManager {
 
     if (!COLORES.includes(color)) return { exito: false, error: 'Color no válido.' };
 
-    // Verificar si había un perfil desconectado guardado para este color
     const previo = this.perfilesDesconectados[color];
     const inventario = previo ? previo.comodines : this.construirInventarioInicialComodines();
 
@@ -254,13 +309,15 @@ class GameManager {
       color: color,
       conectado: true,
       puntos: previo ? previo.puntos : 300,
-      monedas: previo ? previo.monedas : 200,
       territoriosCount: 0,
       soldadosTotales: 0,
       conquistasPartida: previo ? previo.conquistasPartida : 0,
       defensasPartida: previo ? previo.defensasPartida : 0,
       aciertosPartida: previo ? previo.aciertosPartida : 0,
       comodinesUsadosPartida: previo ? previo.comodinesUsadosPartida : 0,
+      tarjetasRisk: previo ? (previo.tarjetasRisk || []) : [],
+      estrellasAcumuladas: previo ? (previo.estrellasAcumuladas || 0) : 0,
+      misTerritoriosIniciales: [],
       comodines: inventario,
       respuesta: null,
       tiempoRespuesta: null,
@@ -272,10 +329,9 @@ class GameManager {
       this.ordenTurnos.push(socketId);
     }
 
-    // Si el jugador tenía territorios por su color, conservarlos; si no, repartir equitativamente
     const tieneTerritorios = Object.values(this.territorios).some(t => t.propietarioColor === color);
-    if (!tieneTerritorios) {
-      this.repartirTerritorios();
+    if (!tieneTerritorios && this.configuracion.modoInicioTablero === 'tarjetas_estrellas') {
+      this.repartirTerritoriosPorModo('tarjetas_estrellas');
     } else {
       this.recalcularEstadisticasTerritoriales();
     }
@@ -284,7 +340,6 @@ class GameManager {
       this.iniciarTurnoJugador(this.ordenTurnos[this.indiceTurnoActual]);
     }
 
-    this.registrarMovimiento(nombreLimpio, color, 'INGRESO', null, null, `${nombreLimpio} (${color.toUpperCase()}) desplegó su ejército en el mapa.`);
     return { exito: true, jugador: this.jugadores[socketId], reconectado: !!previo };
   }
 
@@ -294,7 +349,6 @@ class GameManager {
 
     const color = j.color;
     if (!esExpulsion) {
-      // Guardar estado para permitir reconexión sin perder territorios ni puntos
       this.perfilesDesconectados[color] = { ...j };
     } else {
       delete this.perfilesDesconectados[color];
@@ -303,8 +357,8 @@ class GameManager {
     delete this.jugadores[socketId];
     this.ordenTurnos = this.ordenTurnos.filter(id => id !== socketId);
 
-    if (esExpulsion) {
-      this.repartirTerritorios();
+    if (esExpulsion && this.configuracion.modoInicioTablero === 'tarjetas_estrellas') {
+      this.repartirTerritoriosPorModo('tarjetas_estrellas');
     }
 
     if (this.indiceTurnoActual >= this.ordenTurnos.length) {
@@ -334,34 +388,13 @@ class GameManager {
       this.configuracion.tiempoPorPregunta = Math.max(5, parseInt(cfg.tiempo ?? cfg.tiempoPorPregunta) || 20);
     }
     if (cfg.maxAtaquesConsecutivos !== undefined) {
-      this.configuracion.maxAtaquesConsecutivos = Math.max(1, parseInt(cfg.maxAtaquesConsecutivos) || 5);
-    }
-    if (cfg.permitirAtaquesConsecutivos !== undefined) {
-      this.configuracion.permitirAtaquesConsecutivos = cfg.permitirAtaquesConsecutivos === true || cfg.permitirAtaquesConsecutivos === 'true';
-    }
-    if (cfg.requiereVecindadParaAtacar !== undefined) {
-      this.configuracion.requiereVecindadParaAtacar = cfg.requiereVecindadParaAtacar === true || cfg.requiereVecindadParaAtacar === 'true';
-    }
-    if (cfg.soldadosInicialesPorTerritorio !== undefined) {
-      this.configuracion.soldadosInicialesPorTerritorio = Math.max(1, parseInt(cfg.soldadosInicialesPorTerritorio) || 2);
-    }
-    if (cfg.refuerzosPorRonda !== undefined) {
-      this.configuracion.refuerzosPorRonda = Math.max(0, parseInt(cfg.refuerzosPorRonda) || 2);
-    }
-    if (cfg.puntosRespuestaCorrecta !== undefined) {
-      this.configuracion.puntosRespuestaCorrecta = parseInt(cfg.puntosRespuestaCorrecta) || 150;
-    }
-    if (cfg.penalizacionRespuestaIncorrecta !== undefined) {
-      this.configuracion.penalizacionRespuestaIncorrecta = parseInt(cfg.penalizacionRespuestaIncorrecta) || 30;
+      this.configuracion.maxAtaquesConsecutivos = Math.max(1, parseInt(cfg.maxAtaquesConsecutivos) || 15);
     }
     if (cfg.modoBancoPreguntas !== undefined) {
       this.configuracion.modoBancoPreguntas = cfg.modoBancoPreguntas;
     }
-    if (cfg.modoSeleccionCategorias !== undefined) {
-      this.configuracion.modoSeleccionCategorias = cfg.modoSeleccionCategorias;
-    }
-    if (cfg.modoMapa !== undefined && cfg.modoMapa !== this.configuracion.modoMapa) {
-      this.inicializarEstructuraMapa(cfg.modoMapa);
+    if (cfg.modoInicioTablero !== undefined && cfg.modoInicioTablero !== this.configuracion.modoInicioTablero) {
+      this.repartirTerritoriosPorModo(cfg.modoInicioTablero);
     }
 
     Object.values(this.jugadores).forEach(j => {
@@ -388,26 +421,13 @@ class GameManager {
       atacanteId: jugadorId,
       ataquesRealizados: 0,
       conquistasEnTurno: 0,
-      puedeSeguirAtacando: true,
-      refuerzosRecibidos: true
+      ganaTarjetaEnEsteTurno: false,
+      puedeSeguirAtacando: true
     };
 
-    // Reducir contadores temporales de protección territorial al iniciar turno propio
     Object.values(this.territorios).forEach(t => {
       t.bajoAtaque = false;
-      if (t.propietarioColor === j.color && t.proteccionTurnos > 0) {
-        t.proteccionTurnos = Math.max(0, t.proteccionTurnos - 1);
-      }
     });
-
-    // Otorgar refuerzos estratégicos de inicio de turno en su capital o territorio con menos tropas
-    const misTer = Object.values(this.territorios).filter(t => t.propietarioColor === j.color);
-    if (misTer.length > 0 && this.rondaActual > 1) {
-      const refuerzo = Math.max(1, Math.floor(misTer.length / 3) + (parseInt(this.configuracion.refuerzosPorRonda) || 1));
-      const objetivoRefuerzo = misTer.sort((a, b) => a.soldados - b.soldados)[0];
-      objetivoRefuerzo.soldados += refuerzo;
-      this.registrarMovimiento(j.nombre, j.color, 'REFUERZO_TURNO', null, objetivoRefuerzo.codigo, `${j.nombre} recibió +${refuerzo} soldados de refuerzo en ${objetivoRefuerzo.nombre}.`);
-    }
 
     this.recalcularEstadisticasTerritoriales();
   }
@@ -446,109 +466,88 @@ class GameManager {
   }
 
   // =========================================================================
-  // LÓGICA TERRITORIAL Y VALIDACIÓN DE ATAQUES CONSECUTIVOS (ESTILO RISK)
+  // CANJE DE ESTRELLAS DE TARJETAS RISK POR SOLDADOS EN EL TABLERO FÍSICO
+  // =========================================================================
+  canjearEstrellasRisk(socketId) {
+    const j = this.jugadores[socketId];
+    if (!j) return { exito: false, error: 'Jugador no encontrado.' };
+    const estrellas = j.estrellasAcumuladas || 0;
+    if (estrellas < 2) {
+      return { exito: false, error: 'Necesitas al menos 2 estrellas (★★) para canjear por soldados en el tablero físico.' };
+    }
+
+    const usarEstrellas = Math.min(10, estrellas);
+    const soldadosGanados = TABLA_CANJE_ESTRELLAS_RISK[usarEstrellas] || (usarEstrellas * 3);
+
+    j.estrellasAcumuladas = Math.max(0, estrellas - usarEstrellas);
+    j.tarjetasRisk = [];
+
+    const msg = `⭐ ¡${j.nombre} (${j.color.toUpperCase()}) canjeó ${usarEstrellas} estrellas de Tarjetas Risk por +${soldadosGanados} SOLDADOS para colocar en el tablero físico!`;
+    this.registrarMovimiento(j.nombre, j.color, 'CANJE_ESTRELLAS', null, null, msg);
+
+    return {
+      exito: true,
+      estrellasCanjeadas: usarEstrellas,
+      soldadosGanados,
+      estrellasRestantes: j.estrellasAcumuladas,
+      tarjetasRisk: j.tarjetasRisk,
+      mensajePublico: msg
+    };
+  }
+
+  robarTarjetaManual(socketId) {
+    const j = this.jugadores[socketId];
+    if (!j) return { exito: false, error: 'Jugador no encontrado.' };
+    const tarjeta = this.robarTarjetaRisk();
+    j.tarjetasRisk = j.tarjetasRisk || [];
+    j.tarjetasRisk.push(tarjeta);
+    j.estrellasAcumuladas = (j.estrellasAcumuladas || 0) + tarjeta.estrellas;
+
+    const strEstrellas = '★'.repeat(tarjeta.estrellas);
+    const msg = `🃏 ${j.nombre} robó una Tarjeta Risk de conquista: ${tarjeta.nombre} (${strEstrellas}).`;
+    this.registrarMovimiento(j.nombre, j.color, 'TARJETA_RISK', null, tarjeta.codigo, msg);
+
+    return {
+      exito: true,
+      tarjeta,
+      tarjetasRisk: j.tarjetasRisk,
+      estrellasAcumuladas: j.estrellasAcumuladas,
+      mensajePublico: msg
+    };
+  }
+
+  // =========================================================================
+  // PREPARAR ATAQUE (PENSADO PARA EL TABLERO FÍSICO DE RISK)
+  // El jugador simplemente elige a qué color rival ataca en la mesa
+  // (y opcionalmente qué país del mapa están disputando).
   // =========================================================================
   obtenerTerritoriosAtacablesPorJugador(jugadorColor) {
-    const misTerritorios = Object.values(this.territorios).filter(t => t.propietarioColor === jugadorColor);
-    if (misTerritorios.length === 0) return [];
-
-    if (!this.configuracion.requiereVecindadParaAtacar) {
-      return Object.values(this.territorios)
-        .filter(t => t.propietarioColor !== jugadorColor && t.proteccionTurnos <= 0)
-        .map(t => t.codigo);
-    }
-
-    const atacables = new Set();
-    misTerritorios.forEach(miTer => {
-      (miTer.vecinos || []).forEach(vecCodigo => {
-        const vec = this.territorios[vecCodigo];
-        if (vec && vec.propietarioColor !== jugadorColor && vec.proteccionTurnos <= 0) {
-          atacables.add(vecCodigo);
-        }
-      });
-    });
-
-    // Si por alguna razón un jugador quedó encerrado sin vecinos directos desbloqueados, permitir atacar cualquier territorio enemigo para no bloquear el juego
-    if (atacables.size === 0) {
-      Object.values(this.territorios)
-        .filter(t => t.propietarioColor !== jugadorColor)
-        .forEach(t => atacables.add(t.codigo));
-    }
-
-    return Array.from(atacables);
+    return Object.values(this.territorios)
+      .filter(t => t.propietarioColor !== jugadorColor)
+      .map(t => t.codigo);
   }
 
   prepararAtaqueTerritorial(atacanteId, datosAtaque = {}) {
     const atacante = this.jugadores[atacanteId];
     if (!atacante) return { exito: false, error: 'Atacante no registrado.' };
 
-    const enTurno = this.obtenerAtacanteEnTurno();
-    if (!enTurno || enTurno.id !== atacanteId) {
-      return { exito: false, error: 'No es tu turno de ataque.' };
-    }
-
     let { territorioOrigen, territorioObjetivo, defensorColor } = datosAtaque;
     let terObj = territorioObjetivo ? this.territorios[territorioObjetivo] : null;
     let terOri = territorioOrigen ? this.territorios[territorioOrigen] : null;
 
-    const atacablesCodigos = this.obtenerTerritoriosAtacablesPorJugador(atacante.color);
-
-    // Si el jugador eligió territorio objetivo en el mapa interactivo
-    if (terObj) {
-      if (terObj.propietarioColor === atacante.color) {
-        return { exito: false, error: 'Ese territorio ya pertenece a tu imperio.' };
-      }
-      if (terObj.proteccionTurnos > 0) {
-        return { exito: false, error: `🏰 ${terObj.nombre} está protegido por una Muralla Inca por ${terObj.proteccionTurnos} turno(s).` };
-      }
-      if (this.configuracion.requiereVecindadParaAtacar && !atacablesCodigos.includes(terObj.codigo)) {
-        return { exito: false, error: `⚠️ ${terObj.nombre} no es fronterizo con ninguno de tus territorios actuales.` };
-      }
-    } else {
-      // Si el jugador declaró ataque seleccionando el color rival desde el selector clásico
-      let candidatos = Object.values(this.territorios).filter(
-        t => atacablesCodigos.includes(t.codigo) && (!defensorColor || t.propietarioColor === defensorColor)
-      );
-      if (candidatos.length === 0) {
-        candidatos = Object.values(this.territorios).filter(t => t.propietarioColor !== atacante.color);
-      }
-      if (candidatos.length > 0) {
-        terObj = candidatos[0];
-      }
-    }
-
-    // Seleccionar automáticamente territorio origen fronterizo si no se especificó
-    if (terObj && (!terOri || terOri.propietarioColor !== atacante.color)) {
-      const misVecinos = (terObj.vecinos || [])
-        .map(c => this.territorios[c])
-        .filter(t => t && t.propietarioColor === atacante.color)
-        .sort((a, b) => b.soldados - a.soldados);
-
-      if (misVecinos.length > 0) {
-        terOri = misVecinos[0];
-      } else {
-        const cualquieraPropio = Object.values(this.territorios)
-          .filter(t => t.propietarioColor === atacante.color)
-          .sort((a, b) => b.soldados - a.soldados);
-        terOri = cualquieraPropio[0] || null;
-      }
-    }
-
-    // Determinar el comandante defensor dueño del territorio objetivo
+    // Determinar el defensor principalmente por el color elegido en el celular
     let defensor = null;
-    if (terObj && terObj.propietarioColor && terObj.propietarioColor !== 'neutral') {
-      defensor = Object.values(this.jugadores).find(j => j.color === terObj.propietarioColor);
-    }
-    if (!defensor && defensorColor) {
+    if (defensorColor) {
       defensor = Object.values(this.jugadores).find(j => j.color === defensorColor);
     }
+    if (!defensor && terObj && terObj.propietarioColor && terObj.propietarioColor !== 'neutral') {
+      defensor = Object.values(this.jugadores).find(j => j.color === terObj.propietarioColor);
+    }
     if (!defensor) {
-      // Buscar cualquier otro jugador conectado para que defienda la guarnición
-      defensor = Object.values(this.jugadores).find(j => j.id !== atacanteId) || {
-        id: 'bot_guarnicion',
-        nombre: 'Guarnición Defensora',
-        color: terObj ? terObj.propietarioColor : 'negro'
-      };
+      defensor = Object.values(this.jugadores).find(j => j.id !== atacanteId);
+    }
+    if (!defensor) {
+      return { exito: false, error: 'Se necesita al menos un jugador rival conectado para declarar un ataque.' };
     }
 
     if (terObj) {
@@ -568,7 +567,7 @@ class GameManager {
   }
 
   // =========================================================================
-  // SISTEMA DE COMODINES AMPLIADO (14 COMODINES TRIVIADOR MUNDO)
+  // COMODINES
   // =========================================================================
   usarComodinTema(socketId) {
     const j = this.jugadores[socketId];
@@ -594,7 +593,6 @@ class GameManager {
     const incorrectas = ['A', 'B', 'C', 'D'].filter(o => o !== this.dueloActual.pregunta.correcta);
     const descartadas = incorrectas.sort(() => 0.5 - Math.random()).slice(0, 2);
 
-    this.registrarMovimiento(j.nombre, j.color, 'COMODIN', null, null, `🔨 ${j.nombre} usó el Martillo Demoledor.`);
     return { descartadas, restantes: j.comodines, animacion: 'hammer-smash' };
   }
 
@@ -608,14 +606,12 @@ class GameManager {
     j.comodinesUsadosPartida = (j.comodinesUsadosPartida || 0) + 1;
     const preg = this.dueloActual.pregunta;
 
-    this.registrarMovimiento(j.nombre, j.color, 'COMODIN', null, null, `🦜 ${j.nombre} consultó al Loro Oráculo.`);
-
     if (preg.tipo === 'aproximacion') {
       const anio = parseInt(preg.correcta);
       const margen = Math.max(3, Math.round(Math.abs(anio) * 0.08));
       return {
         tipo: 'aproximacion',
-        pista: `🦜 El Loro Oráculo susurra: ¡El valor exacto está entre ${anio - margen} y ${anio + margen}!`,
+        pista: `Mis plumas me dicen: ¡Entre ${anio - margen} y ${anio + margen}!`,
         restantes: j.comodines,
         animacion: 'parrot-fly'
       };
@@ -649,7 +645,6 @@ class GameManager {
       return { exito: false, error: '❄️ ¡Tormenta Glacial activa! Tus comodines están bloqueados en este duelo.' };
     }
 
-    // Redirecciones a métodos dedicados si son martillo o loro
     if (codigoComodin === 'martillo') {
       const r = this.usarMartillo(socketId);
       return r ? { exito: true, codigo: 'martillo', ...r } : { exito: false, error: 'No disponible en esta pregunta.' };
@@ -661,7 +656,7 @@ class GameManager {
 
     const cantActual = j.comodines[codigoComodin] ?? 0;
     if (cantActual <= 0) {
-      return { exito: false, error: `No te quedan unidades del comodín ${codigoComodin}.` };
+      return { exito: false, error: `No te quedan unidades de este comodín.` };
     }
 
     const preg = this.dueloActual.pregunta;
@@ -689,25 +684,24 @@ class GameManager {
         const eliminada = inc[Math.floor(Math.random() * inc.length)];
         resultado.datosEfecto = { descartadas: [eliminada] };
         resultado.mensajePrivado = `🎯 Dardo Preciso: La opción [${eliminada}] es incorrecta.`;
-        resultado.mensajePublico = `🎯 ¡${j.nombre} lanzó un Dardo Preciso y descartó 1 alternativa!`;
+        resultado.mensajePublico = `🎯 ¡${j.nombre} lanzó un Dardo Preciso y descartó 1 opción!`;
         break;
       }
 
       case 'revelar_respuesta': {
         if (!preg) return { exito: false, error: 'Solo puedes usarlo durante una pregunta activa.' };
-        let pistaSabio = preg.explicacion || `Referencia geográfica/histórica: ${preg.referenciaGeografica || 'Universal'}.`;
-        // Ocultar la respuesta literal si aparece textual para que sea una pista inteligente
+        let pistaSabio = preg.explicacion || `Referencia: ${preg.referenciaGeografica || 'Universal'}.`;
         if (preg.tipo === 'opcion_multiple' && preg.opciones[preg.correcta]) {
           const textoCorr = preg.opciones[preg.correcta];
-          const inicial = textoCorr.slice(0, 2);
-          pistaSabio = `📜 Pista del Sabio: La respuesta correcta empieza con "${inicial}..." (${preg.subcategoria || preg.categoria}).`;
+          const inicial = textoCorr.slice(0, 3);
+          pistaSabio = `📜 Pista del Sabio: La respuesta correcta empieza con "${inicial}..."`;
         } else if (preg.tipo === 'aproximacion') {
           const decada = Math.floor(parseInt(preg.correcta) / 10) * 10;
-          pistaSabio = `📜 Pista del Sabio: Pertenece a la década de ${decada}s.`;
+          pistaSabio = `📜 Pista del Sabio: Ocurrió en la década de los ${decada}s.`;
         }
         resultado.datosEfecto = { pistaSabio };
         resultado.mensajePrivado = pistaSabio;
-        resultado.mensajePublico = `📜 ¡${j.nombre} abrió el Pergamino del Sabio!`;
+        resultado.mensajePublico = `📜 ¡${j.nombre} consultó el Pergamino del Sabio!`;
         break;
       }
 
@@ -716,8 +710,8 @@ class GameManager {
           return { exito: false, error: 'Solo puedes agregar tiempo durante un duelo activo.' };
         }
         resultado.datosEfecto = { segundosExtra: 10 };
-        resultado.mensajePrivado = '⏳ ¡Has añadido +10 segundos al reloj del duelo!';
-        resultado.mensajePublico = `⏳ ¡${j.nombre} activó el Reloj de Arena (+10s al temporizador)!`;
+        resultado.mensajePrivado = '⏳ ¡+10 segundos añadidos al reloj!';
+        resultado.mensajePublico = `⏳ ¡${j.nombre} activó el Reloj de Arena (+10s)!`;
         break;
       }
 
@@ -727,85 +721,57 @@ class GameManager {
         }
         j.segundaOportunidadActiva = true;
         misEfectos.segundaOportunidad = true;
-        resultado.mensajePrivado = '🦅 ¡Fénix activo! Si fallas tu primera elección, podrás elegir una segunda vez.';
-        resultado.mensajePublico = `🦅 ¡${j.nombre} invocó al Fénix de Segunda Oportunidad!`;
+        resultado.mensajePrivado = '🦅 ¡Fénix activo! Si fallas tu primera elección, podrás elegir otra opción.';
+        resultado.mensajePublico = `🦅 ¡${j.nombre} activó Segunda Oportunidad!`;
         break;
       }
 
       case 'doble_puntuacion': {
         misEfectos.doblePuntuacion = true;
-        resultado.mensajePrivado = '👑 ¡Estandarte Real activo! Ganarás x2 puntos y +1 soldado extra si vences.';
-        resultado.mensajePublico = `👑 ¡${j.nombre} alzó el Estandarte Real (Doble Puntuación y Tropa Extra)!`;
+        resultado.mensajePrivado = '🌟 ¡Doble Estrella activa! Si ganas recibes una tarjeta ★★ (2 estrellas).';
+        resultado.mensajePublico = `🌟 ¡${j.nombre} activó Tarjeta Doble Estrella (★★)!`;
         break;
       }
 
       case 'ataque_especial': {
         misEfectos.ataqueEspecial = true;
-        resultado.mensajePrivado = '💣 ¡Cañón de Asedio cargado! Si ganas el duelo, causarás +2 bajas adicionales al territorio enemigo.';
-        resultado.mensajePublico = `💣 ¡${j.nombre} desplegó el Cañón de Asedio (+2 de daño territorial)!`;
+        resultado.mensajePrivado = '💣 ¡Cañón de Asedio! Si ganas este duelo, el defensor pierde 2 soldados en el tablero físico.';
+        resultado.mensajePublico = `💣 ¡${j.nombre} activó Cañón de Asedio (si gana, el defensor retira 2 soldados en el tablero físico)!`;
         break;
       }
 
       case 'escudo': {
         misEfectos.escudoCombate = true;
-        // También puede aplicarse sobre un territorio propio en el mapa
-        const codTer = payload.territorioCodigo || this.dueloActual.territorioObjetivo || this.dueloActual.territorioOrigen;
-        if (codTer && this.territorios[codTer] && this.territorios[codTer].propietarioColor === j.color) {
-          this.territorios[codTer].escudoActivo = true;
-        } else {
-          const miTer = Object.values(this.territorios).find(t => t.propietarioColor === j.color);
-          if (miTer) miTer.escudoActivo = true;
-        }
-        resultado.mensajePrivado = '🛡️ ¡Escudo Imperial activado! Absorberá hasta 2 bajas en defensa.';
-        resultado.mensajePublico = `🛡️ ¡${j.nombre} fortificó sus posiciones con un Escudo Imperial!`;
+        resultado.mensajePrivado = '🛡️ ¡Escudo de Trinchera! Si pierdes este duelo defensivo, no retiras soldado en el tablero físico.';
+        resultado.mensajePublico = `🛡️ ¡${j.nombre} activó Escudo de Trinchera para proteger a sus soldados en el tablero!`;
         break;
       }
 
       case 'refuerzos': {
-        let terDestino = payload.territorioCodigo ? this.territorios[payload.territorioCodigo] : null;
-        if (!terDestino || terDestino.propietarioColor !== j.color) {
-          const misTer = Object.values(this.territorios).filter(t => t.propietarioColor === j.color);
-          terDestino = misTer[0] || null;
-        }
-        if (!terDestino) return { exito: false, error: 'No tienes territorios para reforzar.' };
-        terDestino.soldados += 3;
-        this.recalcularEstadisticasTerritoriales();
-        resultado.datosEfecto = { territorio: terDestino.codigo, soldados: terDestino.soldados };
-        resultado.mensajePrivado = `⚔️ ¡+3 soldados desplegados en ${terDestino.nombre}! (Total: ${terDestino.soldados})`;
-        resultado.mensajePublico = `⚔️ ¡${j.nombre} desplegó +3 soldados de reserva en ${terDestino.nombre}!`;
+        resultado.mensajePrivado = `💂 ¡Coloca +2 soldados de reserva en uno de tus territorios del tablero físico!`;
+        resultado.mensajePublico = `💂 ¡${j.nombre} usó Soldados de Reserva: puede colocar +2 soldados en el tablero físico!`;
         break;
       }
 
       case 'congelar_rival': {
-        if (rival) {
-          rival.congelado = true;
-        }
+        if (rival) rival.congelado = true;
         misEfectos.congelarRival = true;
         resultado.datosEfecto = { rivalId: rival ? rival.id : null };
-        resultado.mensajePrivado = `❄️ ¡Congelaste los comodines de ${rival ? rival.nombre : 'tu rival'}!`;
-        resultado.mensajePublico = `❄️ ¡${j.nombre} desató una Tormenta Glacial y bloqueó los comodines de ${rival ? rival.nombre : 'su oponente'}!`;
+        resultado.mensajePrivado = `❄️ ¡Bloqueaste los comodines de ${rival ? rival.nombre : 'tu rival'}!`;
+        resultado.mensajePublico = `❄️ ¡${j.nombre} congeló los comodines de ${rival ? rival.nombre : 'su rival'} en este duelo!`;
         break;
       }
 
       case 'robar_puntos': {
         misEfectos.robarPuntos = true;
-        resultado.mensajePrivado = '🏴‍☠️ ¡Corsario listo! Si ganas el duelo, saquearás hasta 200 puntos de oro del rival.';
-        resultado.mensajePublico = `🏴‍☠️ ¡${j.nombre} izó la bandera Corsaria para saquear el botín del duelo!`;
+        resultado.mensajePrivado = '🏴‍☠️ ¡Corsario! Si ganas el duelo le robas ★ 1 Estrella a tu rival.';
+        resultado.mensajePublico = `🏴‍☠️ ¡${j.nombre} activó Corsario para robar ★ 1 Estrella si gana el duelo!`;
         break;
       }
 
       case 'proteccion_territorial': {
-        let terProt = payload.territorioCodigo ? this.territorios[payload.territorioCodigo] : null;
-        if (!terProt || terProt.propietarioColor !== j.color) {
-          const misTer = Object.values(this.territorios).filter(t => t.propietarioColor === j.color);
-          terProt = misTer[0] || null;
-        }
-        if (!terProt) return { exito: false, error: 'No tienes territorios para proteger.' };
-        terProt.proteccionTurnos = 2;
-        terProt.escudoActivo = true;
-        resultado.datosEfecto = { territorio: terProt.codigo, proteccionTurnos: 2 };
-        resultado.mensajePrivado = `🏰 ¡Muralla Inca levantada en ${terProt.nombre} por 2 turnos!`;
-        resultado.mensajePublico = `🏰 ¡${j.nombre} levantó una Muralla Inca en ${terProt.nombre} (inmune a conquista)!`;
+        resultado.mensajePrivado = `🏰 ¡Tregua Diplomática! Declara 1 territorio tuyo inmune en el tablero físico por esta ronda.`;
+        resultado.mensajePublico = `🏰 ¡${j.nombre} activó Tregua Diplomática sobre uno de sus territorios en el tablero físico!`;
         break;
       }
 
@@ -822,7 +788,7 @@ class GameManager {
   }
 
   // =========================================================================
-  // CICLO DE DUELO Y RESOLUCIÓN CON CONQUISTA TERRITORIAL Y DEFENSA REAL
+  // DUELO Y RESOLUCIÓN ADAPTADA AL JUEGO DE MESA FÍSICO DE RISK
   // =========================================================================
   iniciarDuelo(atacanteId, defensorId, pregunta, esDesempate = false, contextoTerritorial = {}) {
     this.estado = esDesempate ? 'DESEMPATE' : 'DUELO';
@@ -865,31 +831,6 @@ class GameManager {
       this.jugadores[defensorId].congelado = false;
       this.jugadores[defensorId].segundaOportunidadActiva = false;
     }
-
-    // Si el defensor es la Guarnición Neutral (bot), programar respuesta automática realista
-    if (defensorId === 'bot_guarnicion') {
-      this.simularRespuestaGuarnicion(pregunta);
-    }
-  }
-
-  simularRespuestaGuarnicion(pregunta) {
-    this.respuestaBotGuarnicion = {
-      respuesta: null,
-      tiempoRespuesta: Math.floor(Math.random() * 6000) + 4500
-    };
-    if (pregunta.tipo === 'aproximacion') {
-      const exacto = parseInt(pregunta.correcta) || 1900;
-      const desv = Math.floor(Math.random() * 50) - 25;
-      this.respuestaBotGuarnicion.respuesta = String(exacto + (desv === 0 ? 12 : desv));
-    } else {
-      const aciertaBot = Math.random() < 0.35;
-      if (aciertaBot) {
-        this.respuestaBotGuarnicion.respuesta = pregunta.correcta;
-      } else {
-        const inc = ['A', 'B', 'C', 'D'].filter(o => o !== pregunta.correcta);
-        this.respuestaBotGuarnicion.respuesta = inc[Math.floor(Math.random() * inc.length)];
-      }
-    }
   }
 
   registrarRespuesta(socketId, valor) {
@@ -902,7 +843,6 @@ class GameManager {
 
     const preg = this.dueloActual.pregunta;
 
-    // Verificar comodín Segunda Oportunidad (Fénix) en preguntas de opción múltiple
     if (
       preg &&
       preg.tipo === 'opcion_multiple' &&
@@ -925,9 +865,7 @@ class GameManager {
 
   ambosRespondieron() {
     const at = this.jugadores[this.dueloActual.atacanteId];
-    const def = this.dueloActual.defensorId === 'bot_guarnicion'
-      ? { respuesta: this.respuestaBotGuarnicion?.respuesta || 'A' }
-      : this.jugadores[this.dueloActual.defensorId];
+    const def = this.jugadores[this.dueloActual.defensorId];
     const atListo = !at || at.respuesta !== null;
     const defListo = !def || def.respuesta !== null;
     return atListo && defListo;
@@ -943,29 +881,14 @@ class GameManager {
       puntos: 0
     };
 
-    let def = this.jugadores[this.dueloActual.defensorId];
-    if (!def) {
-      if (this.dueloActual.defensorId === 'bot_guarnicion' && this.respuestaBotGuarnicion) {
-        const terObj = this.territorios[this.dueloActual.territorioObjetivo];
-        def = {
-          id: 'bot_guarnicion',
-          nombre: terObj ? `Guarnición de ${terObj.nombre}` : 'Guarnición Defensora',
-          color: terObj ? terObj.propietarioColor : 'negro',
-          respuesta: this.respuestaBotGuarnicion.respuesta,
-          tiempoRespuesta: this.respuestaBotGuarnicion.tiempoRespuesta,
-          puntos: 100
-        };
-      } else {
-        def = {
-          id: this.dueloActual.defensorId,
-          nombre: 'Defensor (Desconectado)',
-          color: 'azul',
-          respuesta: null,
-          tiempoRespuesta: 99999,
-          puntos: 0
-        };
-      }
-    }
+    const def = this.jugadores[this.dueloActual.defensorId] || {
+      id: this.dueloActual.defensorId,
+      nombre: 'Defensor',
+      color: 'azul',
+      respuesta: null,
+      tiempoRespuesta: 99999,
+      puntos: 0
+    };
 
     const preg = this.dueloActual.pregunta || { tipo: 'opcion_multiple', correcta: 'A', explicacion: '' };
     let ganador = null;
@@ -1028,12 +951,12 @@ class GameManager {
         motivo = `¡Acertó la respuesta correcta [${correcta}]!`;
       } else if (!atOk && defOk) {
         ganador = def;
-        motivo = `¡Defensa heroica! Acertó la respuesta correcta [${correcta}].`;
+        motivo = `¡Defensa exitosa! Acertó la respuesta correcta [${correcta}].`;
       } else if (atOk && defOk) {
         requiereDesempate = true;
         motivo = '¡Ambos acertaron! Pasando a desempate numérico de Diana...';
       } else {
-        motivo = `Ambos fallaron la trivia (Correcta: ${correcta}). La guarnición defensora resiste el asalto.`;
+        motivo = `Ambos fallaron la trivia (Respuesta correcta: ${correcta}).`;
       }
 
       resultadoBase = {
@@ -1058,7 +981,6 @@ class GameManager {
       };
     }
 
-    // Si requiere desempate por Diana, retornar sin resolver aún el territorio
     if (requiereDesempate) {
       return {
         ...resultadoBase,
@@ -1067,243 +989,155 @@ class GameManager {
       };
     }
 
-    // =====================================================================
-    // APLICAR IMPACTO TERRITORIAL, SOLDADOS, DEFENSA Y ATAQUES CONSECUTIVOS
-    // =====================================================================
-    const impacto = this.aplicarResolucionTerritorial(at, def, ganador, preg);
+    const impacto = this.aplicarResolucionTableroFisico(at, def, ganador, preg);
 
     return {
       ...resultadoBase,
       combateTerritorial: impacto.combateTerritorial,
+      instruccionTableroFisico: impacto.instruccionTableroFisico,
+      tarjetaGanada: impacto.tarjetaGanada,
       turnoContinua: impacto.turnoContinua,
       ataquesRealizadosEnTurno: this.turnoEstado.ataquesRealizados,
-      maxAtaquesConsecutivos: this.configuracion.maxAtaquesConsecutivos,
-      victoriaPartida: impacto.victoriaPartida
+      maxAtaquesConsecutivos: this.configuracion.maxAtaquesConsecutivos
     };
   }
 
-  aplicarResolucionTerritorial(at, def, ganador, preg) {
-    const terOri = this.dueloActual.territorioOrigen ? this.territorios[this.dueloActual.territorioOrigen] : null;
-    let terObj = this.dueloActual.territorioObjetivo ? this.territorios[this.dueloActual.territorioObjetivo] : null;
-
-    if (!terObj) {
-      // Buscar un territorio del defensor si no se había fijado
-      terObj = Object.values(this.territorios).find(t => t.propietarioColor === def.color) || null;
-    }
-
+  aplicarResolucionTableroFisico(at, def, ganador, preg) {
+    const terObj = this.dueloActual.territorioObjetivo ? this.territorios[this.dueloActual.territorioObjetivo] : null;
     const ganoAtacante = ganador && ganador.id === at.id;
     const ganoDefensor = ganador && ganador.id === def.id;
 
-    const soldadosAtacanteAntes = terOri ? terOri.soldados : 3;
-    const soldadosDefensorAntes = terObj ? terObj.soldados : 2;
     let bajasAtacante = 0;
     let bajasDefensor = 0;
     let territorioConquistado = false;
-    let escudoAbsorbio = false;
-    let puntosRobados = 0;
-
-    const ptsBase = parseInt(this.configuracion.puntosRespuestaCorrecta) || 150;
-    const multDif = preg.dificultad === 'avanzado' ? 1.8 : (preg.dificultad === 'intermedio' ? 1.3 : 1.0);
-    let puntosAtacanteDelta = 0;
-    let puntosDefensorDelta = 0;
+    let instruccionTableroFisico = '';
+    let tarjetaGanada = null;
 
     if (ganoAtacante) {
       this.turnoEstado.ataquesRealizados++;
-      let dano = parseInt(this.configuracion.bajasPorDerrotaDefensor) || 2;
-      if (this.dueloActual.efectosAtacante?.ataqueEspecial) {
-        dano += 2;
+      this.turnoEstado.conquistasEnTurno++;
+
+      bajasDefensor = this.dueloActual.efectosAtacante?.ataqueEspecial ? 2 : 1;
+      if (this.dueloActual.efectosDefensor?.escudoCombate) {
+        bajasDefensor = 0;
+        instruccionTableroFisico = `🛡️ ${def.nombre} tenía Escudo activo: conserva sus soldados en el tablero físico.`;
+      } else {
+        territorioConquistado = true;
+        instruccionTableroFisico = `⚔️ EN EL TABLERO FÍSICO: ${def.nombre} (${def.color.toUpperCase()}) pierde ${bajasDefensor} soldado(s). ¡Si era su último soldado, ${at.nombre} conquista el territorio!`;
       }
 
-      if (terObj) {
-        if (terObj.escudoActivo || this.dueloActual.efectosDefensor?.escudoCombate) {
-          escudoAbsorbio = true;
-          terObj.escudoActivo = false;
-          dano = Math.max(1, dano - 2);
-        }
-
-        bajasDefensor = Math.min(terObj.soldados, dano);
-        terObj.soldados = Math.max(0, terObj.soldados - dano);
-
-        if (terObj.proteccionTurnos > 0 && terObj.soldados <= 0) {
-          terObj.soldados = 1; // Inmune a conquista por Muralla Inca
-        }
-
-        if (terObj.soldados <= 0) {
-          // ¡CONQUISTA TERRITORIAL!
-          territorioConquistado = true;
-          this.turnoEstado.conquistasEnTurno++;
-          terObj.propietarioId = at.id;
-          terObj.propietarioNombre = at.nombre;
-          terObj.propietarioColor = at.color;
-          const tropasOcupacion = (this.dueloActual.efectosAtacante?.doblePuntuacion) ? 3 : 2;
-          terObj.soldados = tropasOcupacion;
-
-          if (terOri && terOri.soldados > 2) {
-            terOri.soldados = Math.max(1, terOri.soldados - 1);
-          }
-          if (this.jugadores[at.id]) {
-            this.jugadores[at.id].conquistasPartida = (this.jugadores[at.id].conquistasPartida || 0) + 1;
-          }
-        }
+      if (terObj && !this.dueloActual.efectosDefensor?.escudoCombate) {
+        terObj.propietarioId = at.id;
+        terObj.propietarioNombre = at.nombre;
+        terObj.propietarioColor = at.color;
         terObj.bajoAtaque = false;
       }
 
-      let multPuntos = this.dueloActual.efectosAtacante?.doblePuntuacion ? 2 : 1;
-      puntosAtacanteDelta = Math.round(ptsBase * multDif * multPuntos) + (territorioConquistado ? (terObj?.puntosValor || 150) : 0);
+      // Entregar 1 Tarjeta de Risk con ★ 1 o ★★ 2 estrellas (1 por turno al ganar su primer ataque, o extra si usó Doble Estrella)
+      if (!this.turnoEstado.ganaTarjetaEnEsteTurno || this.dueloActual.efectosAtacante?.doblePuntuacion) {
+        this.turnoEstado.ganaTarjetaEnEsteTurno = true;
+        tarjetaGanada = this.robarTarjetaRisk();
+        if (this.dueloActual.efectosAtacante?.doblePuntuacion) {
+          tarjetaGanada.estrellas = 2;
+        }
+        if (this.jugadores[at.id]) {
+          this.jugadores[at.id].tarjetasRisk = this.jugadores[at.id].tarjetasRisk || [];
+          this.jugadores[at.id].tarjetasRisk.push(tarjetaGanada);
+          this.jugadores[at.id].estrellasAcumuladas = (this.jugadores[at.id].estrellasAcumuladas || 0) + tarjetaGanada.estrellas;
+        }
+      }
 
-      // Efecto Corsario (Robar puntos)
-      if (this.dueloActual.efectosAtacante?.robarPuntos && this.jugadores[def.id]) {
-        puntosRobados = Math.min(250, Math.round((this.jugadores[def.id].puntos || 0) * 0.15));
-        this.jugadores[def.id].puntos = Math.max(0, (this.jugadores[def.id].puntos || 0) - puntosRobados);
-        puntosAtacanteDelta += puntosRobados;
+      // Si usó Corsario (robar 1 estrella al rival)
+      if (this.dueloActual.efectosAtacante?.robarPuntos && this.jugadores[def.id] && (this.jugadores[def.id].estrellasAcumuladas || 0) > 0) {
+        this.jugadores[def.id].estrellasAcumuladas--;
+        if (this.jugadores[at.id]) {
+          this.jugadores[at.id].estrellasAcumuladas = (this.jugadores[at.id].estrellasAcumuladas || 0) + 1;
+        }
       }
 
       if (this.jugadores[at.id]) {
-        this.jugadores[at.id].puntos = (this.jugadores[at.id].puntos || 0) + puntosAtacanteDelta;
+        this.jugadores[at.id].puntos = (this.jugadores[at.id].puntos || 0) + 150;
+        this.jugadores[at.id].conquistasPartida = (this.jugadores[at.id].conquistasPartida || 0) + 1;
         this.jugadores[at.id].aciertosPartida = (this.jugadores[at.id].aciertosPartida || 0) + 1;
       }
     } else if (ganoDefensor) {
-      // ¡DEFENSA EXITOSA!
-      bajasAtacante = parseInt(this.configuracion.bajasPorDerrotaAtacante) || 1;
-      if (this.dueloActual.efectosAtacante?.escudoCombate) {
-        bajasAtacante = 0;
-        escudoAbsorbio = true;
-      }
-      if (terOri && bajasAtacante > 0) {
-        terOri.soldados = Math.max(1, terOri.soldados - bajasAtacante);
-      }
-      if (terObj) {
-        terObj.soldados += 1; // Bonificación moral por defensa heroica
-        terObj.bajoAtaque = false;
-      }
+      bajasAtacante = 1;
+      instruccionTableroFisico = `🛡️ EN EL TABLERO FÍSICO: ¡Defensa exitosa de ${def.nombre}! ${at.nombre} (${at.color.toUpperCase()}) retira 1 soldado atacante en el tablero.`;
+      if (terObj) terObj.bajoAtaque = false;
 
-      let multPuntosDef = this.dueloActual.efectosDefensor?.doblePuntuacion ? 2 : 1;
-      puntosDefensorDelta = Math.round(ptsBase * multDif * multPuntosDef);
       if (this.jugadores[def.id]) {
-        this.jugadores[def.id].puntos = (this.jugadores[def.id].puntos || 0) + puntosDefensorDelta;
+        this.jugadores[def.id].puntos = (this.jugadores[def.id].puntos || 0) + 150;
         this.jugadores[def.id].defensasPartida = (this.jugadores[def.id].defensasPartida || 0) + 1;
         this.jugadores[def.id].aciertosPartida = (this.jugadores[def.id].aciertosPartida || 0) + 1;
       }
     } else {
-      // Ambos fallaron
+      instruccionTableroFisico = `⚖️ Ninguno acertó: no se mueven soldados en el tablero físico.`;
       if (terObj) terObj.bajoAtaque = false;
     }
 
     this.recalcularEstadisticasTerritoriales();
 
-    // Determinar si el atacante conserva el turno para seguir atacando (Ataques Consecutivos estilo Risk)
-    const maxConsecutivos = parseInt(this.configuracion.maxAtaquesConsecutivos) || 5;
-    const quedanObjetivos = this.obtenerTerritoriosAtacablesPorJugador(at.color).length > 0;
+    // En Risk de mesa, mientras el atacante gane (o mientras decida seguir en su turno), mantiene su turno para hacer ataques consecutivos
     const turnoContinua = Boolean(
       ganoAtacante &&
       this.configuracion.permitirAtaquesConsecutivos !== false &&
-      this.turnoEstado.ataquesRealizados < maxConsecutivos &&
-      quedanObjetivos
+      this.turnoEstado.ataquesRealizados < (parseInt(this.configuracion.maxAtaquesConsecutivos) || 15)
     );
 
     this.turnoEstado.puedeSeguirAtacando = turnoContinua;
 
-    // Registrar en el historial de movimientos de la partida
-    if (territorioConquistado && terObj) {
-      this.registrarMovimiento(
-        at.nombre,
-        at.color,
-        'CONQUISTA',
-        terOri ? terOri.codigo : null,
-        terObj.codigo,
-        `⚔️ ¡${at.nombre} (${at.color.toUpperCase()}) conquistó ${terObj.nombre} derrotando a ${def.nombre}!`
-      );
-    } else if (ganoAtacante && terObj) {
-      this.registrarMovimiento(
-        at.nombre,
-        at.color,
-        'ATAQUE',
-        terOri ? terOri.codigo : null,
-        terObj.codigo,
-        `💥 ${at.nombre} debilitó las defensas de ${terObj.nombre} (-${bajasDefensor} soldados).`
-      );
-    } else if (ganoDefensor && terObj) {
-      this.registrarMovimiento(
-        def.nombre,
-        def.color,
-        'DEFENSA',
-        terOri ? terOri.codigo : null,
-        terObj.codigo,
-        `🛡️ ¡${def.nombre} defendió con éxito ${terObj.nombre} y rechazó la invasión de ${at.nombre}!`
-      );
-    }
-
-    const victoriaPartida = this.verificarCondicionVictoria();
+    this.registrarMovimiento(
+      ganoAtacante ? at.nombre : def.nombre,
+      ganoAtacante ? at.color : def.color,
+      ganoAtacante ? 'CONQUISTA' : 'DEFENSA',
+      null,
+      terObj ? terObj.codigo : null,
+      instruccionTableroFisico
+    );
 
     return {
       turnoContinua,
-      victoriaPartida,
+      instruccionTableroFisico,
+      tarjetaGanada,
       combateTerritorial: {
-        territorioOrigen: terOri ? { codigo: terOri.codigo, nombre: terOri.nombre, soldadosAntes: soldadosAtacanteAntes, soldadosDespues: terOri.soldados } : null,
+        territorioOrigen: null,
         territorioObjetivo: terObj ? {
           codigo: terObj.codigo,
           nombre: terObj.nombre,
           propietarioColor: terObj.propietarioColor,
           propietarioNombre: terObj.propietarioNombre,
-          soldadosAntes: soldadosDefensorAntes,
+          soldadosAntes: terObj.soldados,
           soldadosDespues: terObj.soldados
         } : null,
         bajasAtacante,
         bajasDefensor,
         territorioConquistado,
         defensaExitosa: ganoDefensor,
-        escudoAbsorbio,
-        puntosRobados,
-        puntosAtacanteDelta,
-        puntosDefensorDelta
+        puntosAtacanteDelta: ganoAtacante ? 150 : 0,
+        puntosDefensorDelta: ganoDefensor ? 150 : 0
       }
     };
   }
 
-  verificarCondicionVictoria() {
-    const listaJug = Object.values(this.jugadores);
-    const todosTer = Object.values(this.territorios);
-    if (listaJug.length < 2 || todosTer.length === 0) return null;
-
-    // 1. Victoria por Dominación Territorial (>= 80% de los territorios del mapa)
-    for (const j of listaJug) {
-      const propios = todosTer.filter(t => t.propietarioColor === j.color).length;
-      if (propios >= Math.ceil(todosTer.length * 0.80)) {
-        return {
-          ganador: { id: j.id, nombre: j.nombre, color: j.color, puntos: j.puntos, territorios: propios },
-          motivo: `¡DOMINACIÓN IMPERIAL! Conquistó ${propios} de ${todosTer.length} territorios del mapa.`
-        };
-      }
-    }
-
-    // 2. Victoria por Límite de Rondas completadas
-    const maxRondas = parseInt(this.configuracion.rondasMaximasPartida) || 12;
-    if (this.rondaActual > maxRondas) {
-      const ordenados = [...listaJug].sort((a, b) => (b.puntos + b.territoriosCount * 150) - (a.puntos + a.territoriosCount * 150));
-      const camp = ordenados[0];
-      return {
-        ganador: { id: camp.id, nombre: camp.nombre, color: camp.color, puntos: camp.puntos, territorios: camp.territoriosCount },
-        motivo: `¡FIN DE LAS ${maxRondas} RONDAS! Mayor puntuación imperial combinada.`
-      };
-    }
-
-    return null;
-  }
-
-  reiniciarPartidaCompleta() {
+  reiniciarPartidaCompleta(modo = null) {
     this.rondaActual = 1;
     this.indiceTurnoActual = 0;
     this.preguntasUsadasIds = [];
     this.categoriasRecientes = [];
     this.historialMovimientos = [];
+    this.inicializarMazoTarjetasRisk();
+
     Object.values(this.jugadores).forEach(j => {
       j.puntos = 300;
       j.conquistasPartida = 0;
       j.defensasPartida = 0;
       j.aciertosPartida = 0;
+      j.tarjetasRisk = [];
+      j.estrellasAcumuladas = 0;
       j.comodines = this.construirInventarioInicialComodines();
     });
-    this.repartirTerritorios();
+
+    this.repartirTerritoriosPorModo(modo || this.configuracion.modoInicioTablero || 'tarjetas_estrellas');
     if (this.ordenTurnos.length > 0) {
       this.iniciarTurnoJugador(this.ordenTurnos[0]);
     }
@@ -1332,14 +1166,14 @@ class GameManager {
   obtenerEstadoCompletoMapa() {
     const atacante = this.obtenerAtacanteEnTurno();
     return {
-      modoMapa: this.configuracion.modoMapa,
+      modoMapa: 'risk',
+      modoInicioTablero: this.configuracion.modoInicioTablero || 'tarjetas_estrellas',
       rondaActual: this.rondaActual,
-      rondasMaximas: this.configuracion.rondasMaximasPartida || 12,
       atacanteId: atacante ? atacante.id : null,
       atacanteNombre: atacante ? atacante.nombre : null,
       atacanteColor: atacante ? atacante.color : null,
       ataquesRealizados: this.turnoEstado.ataquesRealizados,
-      maxAtaquesConsecutivos: this.configuracion.maxAtaquesConsecutivos || 5,
+      maxAtaquesConsecutivos: this.configuracion.maxAtaquesConsecutivos || 15,
       puedeSeguirAtacando: this.turnoEstado.puedeSeguirAtacando,
       territoriosAtacables: atacante ? this.obtenerTerritoriosAtacablesPorJugador(atacante.color) : [],
       territorios: Object.values(this.territorios),

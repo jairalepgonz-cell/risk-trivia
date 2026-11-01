@@ -329,13 +329,19 @@
     </div>
   </div>
 
-  <!-- 2. PANTALLA DE ESPERA / GUARDIA DEFENSIVA -->
+  <!-- 2. PANTALLA DE ESPERA / GUARDIA DEFENSIVA + TARJETAS RISK -->
   <div id="screen-wait" class="panel-center hidden">
-    <div style="font-size:3rem;">🛡️</div>
-    <h3 id="wait-title" style="font-size: clamp(1.2rem, 5vw, 1.55rem); color:#ffb703;">En Guardia Estratégica...</h3>
-    <p id="wait-msg" style="color: #94a3b8; font-size:0.95rem;">Observa el Mapa en la pantalla Host y prepárate por si atacan uno de tus territorios.</p>
-    <div class="card-box" style="margin-top:0.5rem;">
-      <label>🛡️ Comodines de Mapa / Defensa Rápida:</label>
+    <div style="font-size:2.4rem;">🛡️🎲</div>
+    <h3 id="wait-title" style="font-size: clamp(1.15rem, 4.8vw, 1.45rem); color:#ffb703;">En Guardia en el Tablero Risk...</h3>
+    <p id="wait-msg" style="color: #94a3b8; font-size:0.9rem;">Atento a la mesa física y a la pantalla Host por si atacan tu ejército.</p>
+
+    <!-- Botón para abrir Mis Países y Tarjetas de Estrellas (★1 / ★★2) -->
+    <button type="button" onclick="abrirModalMiTableroRisk()" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; font-weight:900; padding:0.7rem; cursor:pointer;">
+      🃏 Ver Mis Países y Tarjetas Estrellas (★1 / ★★2)
+    </button>
+
+    <div class="card-box" style="margin-top:0.2rem;">
+      <label>🛡️ Comodines de Defensa Rápida:</label>
       <div class="tactical-comodines-grid">
         <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('escudo')">
           <span>🛡️ Escudo</span>
@@ -353,19 +359,23 @@
     </div>
   </div>
 
-  <!-- 3. PANTALLA DECLARAR ATAQUE (SOPORTA ATAQUES CONSECUTIVOS ESTILO RISK) -->
+  <!-- 3. PANTALLA DECLARAR ATAQUE EN EL TABLERO FÍSICO RISK (CON ATAQUES CONSECUTIVOS) -->
   <div id="screen-attack" class="panel-center hidden">
-    <h2 id="attack-phase-title" style="color: #ffb703; font-size: clamp(1.25rem, 4.8vw, 1.6rem);">⚔️ ¡Tu Fase de Ataque!</h2>
+    <h2 id="attack-phase-title" style="color: #ffb703; font-size: clamp(1.2rem, 4.6vw, 1.5rem);">⚔️ ¡Tu Turno en el Tablero Risk!</h2>
     <div class="streak-banner" id="streak-banner-txt">
-      🔥 Ataques realizados en este turno: 0 / 5 (Puedes atacar territorios conectados)
+      🔥 Puedes atacar en el tablero físico todas las veces que ganes hasta decidir pasar turno
     </div>
 
-    <div class="card-box">
-      <label>🗺️ 1. Selecciona el Territorio Enemigo a Invadir:</label>
-      <select id="sel-territorio-objetivo" style="background:#0f172a; color:white; width:100%; border:1px solid #3b82f6; margin-bottom:0.5rem;"></select>
+    <button type="button" onclick="abrirModalMiTableroRisk()" style="background:#1e293b; border:1px solid var(--gold); color:var(--gold); font-weight:800; padding:0.5rem; font-size:0.86rem; cursor:pointer;">
+      🃏 Mis Países Iniciales y Canje de Estrellas (★1 / ★★2)
+    </button>
 
-      <label style="color:#94a3b8; font-weight:600; font-size:0.78rem;">O filtra por Comandante Rival:</label>
-      <select id="sel-rival" style="background:#1c2433; color:white; width:100%; padding:0.5rem; font-size:0.9rem;"></select>
+    <div class="card-box">
+      <label>🎯 1. ¿A qué Ejército (Color) atacas en el tablero físico?</label>
+      <select id="sel-rival" style="background:#0f172a; color:white; width:100%; border:2px solid #ef4444; margin-bottom:0.5rem; font-weight:bold;"></select>
+
+      <label style="color:#94a3b8; font-weight:600; font-size:0.78rem;">🗺️ 2. País en disputa del mapa Risk (opcional):</label>
+      <select id="sel-territorio-objetivo" style="background:#1c2433; color:white; width:100%; padding:0.45rem; font-size:0.86rem;"></select>
     </div>
 
     <!-- Selección de Categoría estilo TV / Comodín de Tema -->
@@ -439,32 +449,63 @@
       </div>
     </div>
 
-    <!-- Comodines Estratégicos Pre-Ataque -->
-    <div class="card-box">
-      <label>⚡ Potenciadores de Asalto y Mapa:</label>
-      <div class="tactical-comodines-grid">
-        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('refuerzos')">
-          <span>⚔️ +3 Tropas</span>
-          <small>Disp: <span class="cnt-refuerzos">0</span></small>
-        </button>
-        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('escudo')">
-          <span>🛡️ Escudo</span>
-          <small>Disp: <span class="cnt-escudo">0</span></small>
-        </button>
-        <button type="button" class="btn-tac-comodin" onclick="usarComodinMapa('proteccion_territorial')">
-          <span>🏰 Muralla</span>
-          <small>Disp: <span class="cnt-proteccion">0</span></small>
-        </button>
+    <button id="btn-atacar" style="background:linear-gradient(135deg, #e63946, #d90429); color:white; font-weight:900; font-size:1.18rem; cursor:pointer; box-shadow:0 4px 15px rgba(230,57,70,0.4);">
+      ⚔️ ¡ATACAR EN TABLERO RISK!
+    </button>
+
+    <button type="button" id="btn-pasar" style="background:#334155; color:white; font-weight:bold; font-size:0.98rem; cursor:pointer;">
+      🚩 Terminar Mis Ataques / Pasar Turno
+    </button>
+  </div>
+
+  <!-- MODAL MÓVIL: MIS PAÍSES DEL TABLERO RISK (★1 / ★★2) Y CANJE DE TARJETAS -->
+  <div id="modal-mi-risk" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:120; display:flex; align-items:center; justify-content:center; padding:0.8rem;">
+    <div style="background:#111927; border:2px solid var(--gold); border-radius:14px; padding:1rem; width:100%; max-width:460px; max-height:88dvh; overflow-y:auto; text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:0.5rem; margin-bottom:0.7rem;">
+        <strong style="color:var(--gold); font-size:1.05rem;">🃏 Mis Tarjetas y Países Risk</strong>
+        <button type="button" onclick="cerrarModalMiTableroRisk()" style="background:#ef4444; color:#fff; padding:0.3rem 0.7rem; font-size:0.85rem; font-weight:bold;">✕</button>
+      </div>
+
+      <!-- Sección 1: Tarjetas de Estrellas Ganadas y Canje por Soldados -->
+      <div style="background:#162032; border:1px solid #2b3b54; border-radius:10px; padding:0.7rem; margin-bottom:0.75rem;">
+        <div style="font-size:0.85rem; color:#fde047; font-weight:800; margin-bottom:0.35rem;">
+          ⭐ Mis Tarjetas Risk para Canjear (<span id="mob-stars-total">0</span>★ acumuladas)
+        </div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.45rem;">
+          Tabla Risk: 2★=+2💂 | 3★=+4💂 | 4★=+7💂 | 5★=+10💂 | 6★=+13💂 | 7★=+17💂
+        </div>
+        <div id="mob-risk-cards-list" style="display:flex; flex-direction:column; gap:0.3rem; max-height:110px; overflow-y:auto; margin-bottom:0.5rem; font-size:0.82rem;"></div>
+        <div style="display:flex; gap:0.4rem;">
+          <button type="button" onclick="canjearMisEstrellas()" style="flex:1; background:#2a9d8f; color:#fff; font-weight:800; font-size:0.82rem; padding:0.5rem;">
+            ✨ Canjear Estrellas
+          </button>
+          <button type="button" onclick="robarTarjetaManual()" style="flex:1; background:#3b82f6; color:#fff; font-weight:800; font-size:0.82rem; padding:0.5rem;">
+            🃏 Robar Tarjeta
+          </button>
+        </div>
+      </div>
+
+      <!-- Sección 2: Elegir o Reclamar un País en el Mapa Risk -->
+      <div style="background:#162032; border:1px solid #2b3b54; border-radius:10px; padding:0.7rem; margin-bottom:0.75rem;">
+        <div style="font-size:0.85rem; color:#38bdf8; font-weight:800; margin-bottom:0.35rem;">
+          📍 Elegir / Ocupar un País del Mapa Risk:
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+          <select id="mob-sel-claim-country" style="flex:1; background:#0f172a; color:#fff; font-size:0.82rem; padding:0.45rem; border:1px solid #475569;"></select>
+          <button type="button" onclick="reclamarPaisSeleccionado()" style="background:#f59e0b; color:#000; font-weight:900; font-size:0.82rem; padding:0.45rem 0.7rem;">
+            Ocupar
+          </button>
+        </div>
+      </div>
+
+      <!-- Sección 3: Lista de Mis Países en el Tablero Físico (con ★1 o ★★2 soldados) -->
+      <div style="background:#162032; border:1px solid #2b3b54; border-radius:10px; padding:0.7rem;">
+        <div style="font-size:0.85rem; color:#a7f3d0; font-weight:800; margin-bottom:0.35rem;">
+          🏳️ Mis Países en el Tablero Físico (Soldados Iniciales ★1 / ★★2):
+        </div>
+        <div id="mob-my-countries-list" style="display:flex; flex-direction:column; gap:0.3rem; max-height:190px; overflow-y:auto; font-size:0.82rem;"></div>
       </div>
     </div>
-
-    <button id="btn-atacar" style="background:linear-gradient(135deg, #e63946, #d90429); color:white; font-weight:900; font-size:1.2rem; cursor:pointer; box-shadow:0 4px 15px rgba(230,57,70,0.4);">
-      ⚔️ ¡LANZAR ATAQUE TERRITORIAL!
-    </button>
-
-    <button type="button" id="btn-pasar" style="background:#334155; color:white; font-weight:bold; font-size:1rem; cursor:pointer;">
-      🚩 Finalizar Fase de Ataque / Pasar Turno
-    </button>
   </div>
 
   <!-- 4. PANTALLA DE DUELO -->
@@ -698,38 +739,119 @@
       estadoMapaLocal = estadoMapa;
       if (miJugador) {
         const yo = (estadoMapa.jugadores || []).find(x => x.id === socket.id || x.color === miJugador.color);
-        if (yo) actualizarBarraImperio(yo);
+        if (yo) {
+          miJugador = yo;
+          actualizarBarraImperio(yo);
+        }
         poblarSelectoresTerritoriosYRivales();
+        renderizarModalMiTableroRisk();
       }
     });
 
+    // Funciones para el Modal de Mis Países Iniciales (★1 / ★★2) y Canje de Estrellas Risk
+    window.abrirModalMiTableroRisk = function() {
+      renderizarModalMiTableroRisk();
+      document.getElementById('modal-mi-risk').classList.remove('hidden');
+    };
+    window.cerrarModalMiTableroRisk = function() {
+      document.getElementById('modal-mi-risk').classList.add('hidden');
+    };
+    window.canjearMisEstrellas = function() {
+      socket.emit('canjear_estrellas_risk', { socketId: socket.id });
+    };
+    window.robarTarjetaManual = function() {
+      socket.emit('robar_tarjeta_risk', { socketId: socket.id });
+    };
+    window.reclamarPaisSeleccionado = function() {
+      const cod = document.getElementById('mob-sel-claim-country').value;
+      if (!cod || !miJugador) return;
+      socket.emit('elegir_territorio_mapa', {
+        territorioCodigo: cod,
+        colorJugador: miJugador.color
+      });
+    };
+
+    socket.on('tarjeta_risk_recibida', (res) => {
+      window.soundFX.play('comodin');
+      alert(`🃏 ¡Recibiste la tarjeta Risk: ${res.tarjeta.nombre} (${'★'.repeat(res.tarjeta.estrellas)} = ${res.tarjeta.estrellas} soldado${res.tarjeta.estrellas > 1 ? 's' : ''})!`);
+      renderizarModalMiTableroRisk();
+    });
+
+    socket.on('estrellas_canjeadas_ok', (res) => {
+      window.soundFX.play('conquest');
+      alert(`✨ ${res.mensajeTableroFisico}`);
+      renderizarModalMiTableroRisk();
+    });
+
+    function renderizarModalMiTableroRisk() {
+      if (!miJugador || !estadoMapaLocal) return;
+      const todosPaises = estadoMapaLocal.territorios || [];
+      const misPaises = todosPaises.filter(t => t.propietarioColor === miJugador.color);
+      const misTarjetas = Array.isArray(miJugador.tarjetasRisk) ? miJugador.tarjetasRisk : [];
+      const misEstrellas = miJugador.estrellasAcumuladas || misTarjetas.reduce((acc, c) => acc + (c.estrellas || 1), 0);
+
+      document.getElementById('mob-stars-total').textContent = misEstrellas;
+
+      const cardsDiv = document.getElementById('mob-risk-cards-list');
+      if (misTarjetas.length === 0) {
+        cardsDiv.innerHTML = '<div style="color:#64748b;">Aún no tienes tarjetas acumuladas. Gana un ataque o pulsa Robar Tarjeta.</div>';
+      } else {
+        cardsDiv.innerHTML = misTarjetas.map(c => `
+          <div style="display:flex; justify-content:space-between; background:#0f172a; padding:0.35rem 0.55rem; border-radius:6px; border:1px solid #334155;">
+            <span>🃏 <strong>${c.nombre}</strong></span>
+            <span style="color:#fde047; font-weight:900;">${'★'.repeat(c.estrellas || 1)} (${c.estrellas || 1} 💂)</span>
+          </div>
+        `).join('');
+      }
+
+      const selClaim = document.getElementById('mob-sel-claim-country');
+      const prevClaim = selClaim.value;
+      selClaim.innerHTML = '';
+      todosPaises.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.codigo;
+        const stars = '★'.repeat(t.estrellasTarjeta || 1);
+        opt.textContent = `${t.nombre} (${stars}) — [${t.propietarioColor.toUpperCase()}]`;
+        selClaim.appendChild(opt);
+      });
+      if (prevClaim) selClaim.value = prevClaim;
+
+      const myCountriesDiv = document.getElementById('mob-my-countries-list');
+      if (misPaises.length === 0) {
+        myCountriesDiv.innerHTML = '<div style="color:#64748b;">No tienes países asignados aún. El Host puede sortear las 42 tarjetas o puedes elegir un país arriba.</div>';
+      } else {
+        myCountriesDiv.innerHTML = misPaises.map(p => `
+          <div style="display:flex; justify-content:space-between; background:#0f172a; padding:0.38rem 0.6rem; border-radius:6px; border-left:3px solid var(--gold);">
+            <span>📍 <strong>${p.nombre}</strong> <small style="color:#94a3b8;">(${p.subregion || ''})</small></span>
+            <span style="color:#fde047; font-weight:900;">${'★'.repeat(p.estrellasTarjeta || 1)} → ${p.soldados} 💂</span>
+          </div>
+        `).join('');
+      }
+    }
+
     function poblarSelectoresTerritoriosYRivales() {
       if (!estadoMapaLocal || !miJugador) return;
-      const atacablesSet = new Set(estadoMapaLocal.territoriosAtacables || []);
-      const enemigos = (estadoMapaLocal.territorios || []).filter(t => t.propietarioColor !== miJugador.color);
+      const colorRivalElegido = selRival.value;
+      const enemigos = (estadoMapaLocal.territorios || []).filter(t =>
+        colorRivalElegido ? t.propietarioColor === colorRivalElegido : t.propietarioColor !== miJugador.color
+      );
 
-      // Ordenar primero los conectados (atacables directos)
-      enemigos.sort((a, b) => (atacablesSet.has(b.codigo) ? 1 : 0) - (atacablesSet.has(a.codigo) ? 1 : 0));
-
-      selTerritorioObjetivo.innerHTML = '';
+      selTerritorioObjetivo.innerHTML = '<option value="">🎲 Ataque directo en el tablero físico (Cualquier país)</option>';
       enemigos.forEach(t => {
-        const esConectado = atacablesSet.has(t.codigo);
         const opt = document.createElement('option');
         opt.value = t.codigo;
         opt.dataset.color = t.propietarioColor;
-        const flag = t.mapa === 'peru' ? '🇵🇪' : '🌍';
-        opt.textContent = `${esConectado ? '⚔️ [Frontera]' : '🔒'} ${flag} ${t.nombre} — ${t.propietarioNombre} (${t.soldados} 💂)`;
+        const stars = '★'.repeat(t.estrellasTarjeta || 1);
+        opt.textContent = `📍 ${t.nombre} (${stars}) — ${t.propietarioNombre} (${t.soldados} 💂)`;
         selTerritorioObjetivo.appendChild(opt);
       });
     }
 
     selRival.addEventListener('change', () => {
-      const col = selRival.value;
-      const match = Array.from(selTerritorioObjetivo.options).find(o => o.dataset.color === col);
-      if (match) selTerritorioObjetivo.value = match.value;
+      poblarSelectoresTerritoriosYRivales();
     });
 
-    socket.on('turno_actualizado', ({ atacanteId, atacanteNombre, ataquesRealizados, maxAtaquesConsecutivos, jugadores }) => {
+    socket.on('turno_actualizado', ({ atacanteId, atacanteNombre, ataquesRealizados, jugadores }) => {
       if (!miJugador) return;
 
       if (socket.id === atacanteId) {
@@ -739,13 +861,12 @@
         screenAttack.classList.remove('hidden');
 
         const racha = ataquesRealizados || 0;
-        const maxR = maxAtaquesConsecutivos || 5;
         document.getElementById('attack-phase-title').textContent =
-          racha > 0 ? `🔥 ¡Ataque Consecutivo #${racha + 1}!` : '⚔️ ¡Tu Turno de Atacar!';
+          racha > 0 ? `🔥 ¡Ataque Seguido #${racha + 1} en el Tablero!` : '⚔️ ¡Tu Turno de Atacar en el Tablero!';
         document.getElementById('streak-banner-txt').textContent =
           racha > 0
-            ? `🏆 ¡Ganaste el duelo anterior! Ataques en este turno: ${racha} / ${maxR}. ¡Elige otro territorio o finaliza tu turno!`
-            : `⚔️ Fase de invasión activa (${racha} / ${maxR} ataques). Elige un territorio vecino enemigo.`;
+            ? `🏆 ¡Ganaste ${racha} duelo(s) seguido(s)! Puedes seguir atacando a cualquier rival en el tablero físico o terminar tu turno.`
+            : `🎲 Elige a qué ejército (color) vas a atacar en el tablero físico de Risk.`;
 
         const disp = miJugador.comodines.tema ?? miJugador.comodines.cambio_categoria ?? 0;
         usandoComodinTema = false;
@@ -753,13 +874,17 @@
         btnToggleComodinCat.style.background = '#3b4a6b';
         btnToggleComodinCat.textContent = `🎯 Usar Cambio de Categoría (${disp} disponibles)`;
 
+        const prevRival = selRival.value;
         selRival.innerHTML = '';
         jugadores.filter(r => r.id !== socket.id).forEach(r => {
           const opt = document.createElement('option');
           opt.value = r.color;
-          opt.textContent = `${r.nombre} (${r.color.toUpperCase()} — ${r.territoriosCount || 0} terr.)`;
+          opt.textContent = `🎯 Ejército ${r.color.toUpperCase()} — ${r.nombre} (${r.territoriosCount || 0} países)`;
           selRival.appendChild(opt);
         });
+        if (prevRival && Array.from(selRival.options).some(o => o.value === prevRival)) {
+          selRival.value = prevRival;
+        }
 
         poblarSelectoresTerritoriosYRivales();
       } else {
@@ -767,17 +892,18 @@
         screenBattle.classList.add('hidden');
         screenWait.classList.remove('hidden');
         document.getElementById('wait-msg').textContent = atacanteNombre
-          ? `Turno actual de ${atacanteNombre}. ¡Prepárate para defender tus territorios!`
-          : 'Atento al Mapa Estratégico en la pantalla Host.';
+          ? `Turno en el tablero físico de ${atacanteNombre}. ¡Prepárate por si te ataca!`
+          : 'Atento al tablero físico de Risk y a la pantalla Host.';
       }
     });
 
     document.getElementById('btn-atacar').addEventListener('click', () => {
       window.soundFX.play('attack');
       const optTer = selTerritorioObjetivo.options[selTerritorioObjetivo.selectedIndex];
+      const defColor = (optTer && optTer.dataset.color) ? optTer.dataset.color : selRival.value;
       socket.emit('declarar_ataque', {
         territorioObjetivo: selTerritorioObjetivo.value || null,
-        defensorColor: optTer ? optTer.dataset.color : selRival.value,
+        defensorColor: defColor,
         categoriaDeseada: document.getElementById('sel-cat').value,
         usoComodinTema: usandoComodinTema
       });

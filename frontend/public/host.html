@@ -685,46 +685,44 @@
   <!-- BARRA SUPERIOR -->
   <nav class="top-nav">
     <div class="brand-title">
-      <span>🌍⚔️🇵🇪</span>
-      <span>TRIVIADOR MUNDO & PERÚ — MESA HOST</span>
+      <span>🎲🗺️🇵🇪🌍</span>
+      <span>RISK TABLERO FÍSICO + TRIVIADOR PERÚ & MUNDO</span>
     </div>
     <div class="top-actions">
-      <button class="btn-top" id="btn-open-wheel" title="Ruleta de Categorías estilo Concurso de TV">🎡 Ruleta TV de Categorías</button>
-      <button class="btn-top" id="btn-reset-map" title="Repartir nuevamente los territorios">🔄 Reiniciar Mapa</button>
+      <button class="btn-top gold" id="btn-sortear-tarjetas" title="Sortear las 42 tarjetas de Risk con 1 o 2 estrellas de soldados">🎲 Sortear 42 Tarjetas (★1 / ★★2)</button>
+      <button class="btn-top" id="btn-modo-elegir" title="Permitir que cada jugador elija libremente sus territorios en el tablero">📍 Modo Elegir Lugar</button>
+      <button class="btn-top" id="btn-ver-reparto" title="Ver qué países e iniciales (★1 o ★★2) le tocaron a cada jugador para armar el tablero">📋 Países por Jugador</button>
+      <button class="btn-top" id="btn-open-wheel" title="Ruleta de Categorías estilo Concurso de TV">🎡 Ruleta TV</button>
       <button class="btn-top" id="btn-sound-toggle">🔊 Sonido: ON</button>
-      <a href="/player.html" target="_blank" class="btn-top">📱 Abrir Vista Jugador</a>
-      <a href="/admin.html" target="_blank" class="btn-top gold">⚙️ Panel de Administración</a>
+      <a href="/player.html" target="_blank" class="btn-top">📱 Vista Jugador</a>
+      <a href="/admin.html" target="_blank" class="btn-top">⚙️ Admin</a>
     </div>
   </nav>
 
-  <!-- PANTALLA LOBBY Y MAPA INTERACTIVO RISK -->
+  <!-- PANTALLA LOBBY Y MAPA CLÁSICO DE RISK (42 TERRITORIOS) -->
   <div id="view-lobby">
-    <!-- IZQUIERDA: MAPA INTERACTIVO Y CONTROLES -->
+    <!-- IZQUIERDA: MAPA CLÁSICO DE RISK Y CONTROLES DE MESA -->
     <div class="main-map-card">
       <div class="turn-banner-bar">
-        <div id="lobby-status">🎯 Esperando comandantes para iniciar la conquista...</div>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
+        <div id="lobby-status">🎯 Esperando comandantes para iniciar la partida en el tablero físico de Risk...</div>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <span class="consecutive-badge" id="badge-modo-inicio">🃏 Modo: Tarjetas (★1 / ★★2)</span>
           <span class="consecutive-badge" id="badge-ronda">Ronda 1</span>
-          <span class="consecutive-badge" id="badge-consecutivo">Ataques en turno: 0 / 5</span>
+          <span class="consecutive-badge" id="badge-consecutivo">Ataques seguidos: 0</span>
         </div>
       </div>
 
-      <!-- MAPA TERRITORIAL INTERACTIVO ESTILO RISK / TRIVIADOR -->
-      <div class="map-viewport" id="map-viewport">
-        <svg id="risk-map-svg" viewBox="0 0 1040 620" preserveAspectRatio="xMidYMid meet">
+      <!-- MAPA OFICIAL DE RISK (42 TERRITORIOS) CON INDICADORES DE ESTRELLAS Y SOLDADOS -->
+      <div class="map-viewport" id="map-viewport" style="height: 550px; background: #1a140e;">
+        <svg id="risk-map-svg" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <filter id="glow-shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.65"/>
+            <filter id="glow-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.85"/>
             </filter>
           </defs>
           <g id="map-pan-zoom-group">
-            <!-- Fondo decorativo de teatros geográficos -->
-            <rect x="20" y="25" width="485" height="580" rx="16" fill="rgba(230, 57, 70, 0.05)" stroke="rgba(230, 57, 70, 0.25)" stroke-dasharray="8,6"/>
-            <text x="260" y="50" class="map-divider-label" text-anchor="middle">🇵🇪 TEATRO PERÚ (REGIONES)</text>
-
-            <rect x="515" y="25" width="505" height="580" rx="16" fill="rgba(58, 134, 255, 0.05)" stroke="rgba(58, 134, 255, 0.25)" stroke-dasharray="8,6"/>
-            <text x="765" y="50" class="map-divider-label" text-anchor="middle">🌍 TEATRO MUNDIAL (CONTINENTES)</text>
-
+            <!-- Imagen del Tablero Clásico de Risk -->
+            <image href="/img/risk-map.png" x="0" y="0" width="1000" height="640" preserveAspectRatio="none" />
             <g id="map-connections-layer"></g>
             <g id="map-territories-layer"></g>
             <g id="map-badges-layer"></g>
@@ -733,50 +731,70 @@
 
         <!-- Controles de Zoom y Desplazamiento -->
         <div class="map-controls-overlay">
-          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(0.2)">➕ Zoom</button>
-          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(-0.2)">➖ Zoom</button>
-          <button class="btn-map-ctrl" onclick="resetearVistaMapa()">🎯 Centrar</button>
+          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(0.25)">➕ Zoom</button>
+          <button class="btn-map-ctrl" onclick="ajustarZoomMapa(-0.25)">➖ Zoom</button>
+          <button class="btn-map-ctrl" onclick="resetearVistaMapa()">🎯 Centrar Mapa</button>
         </div>
 
-        <!-- Inspector de Territorio Seleccionado y Acción Directa -->
+        <!-- Inspector de Territorio Seleccionado (Permite Asignar en Modo Elección o Atacar) -->
         <div class="territory-inspector" id="territory-inspector">
-          <div style="font-size:0.78rem; color:#94a3b8; text-transform:uppercase;">Territorio Seleccionado</div>
-          <div id="insp-name" style="font-size:1.1rem; font-weight:900; color:var(--gold); margin:0.15rem 0;">Haz clic en un territorio</div>
-          <div id="insp-owner" style="font-size:0.88rem; color:#e2e8f0;">Propietario: —</div>
-          <div id="insp-troops" style="font-size:0.88rem; color:#38bdf8; margin-bottom:0.5rem;">Guarnición: —</div>
-          <button id="btn-map-attack-now" class="hidden" style="width:100%; padding:0.45rem; background:#e63946; color:#fff; border:none; border-radius:6px; font-weight:800; cursor:pointer;">
-            ⚔️ ¡Atacar este Territorio!
+          <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Territorio del Tablero Risk</div>
+          <div id="insp-name" style="font-size:1.08rem; font-weight:900; color:var(--gold); margin:0.15rem 0;">Haz clic en cualquier país</div>
+          <div id="insp-stars" style="font-size:0.85rem; color:#fde047; font-weight:bold;">Tarjeta: —</div>
+          <div id="insp-owner" style="font-size:0.85rem; color:#e2e8f0;">Ocupado por: —</div>
+          <div id="insp-troops" style="font-size:0.85rem; color:#38bdf8; margin-bottom:0.45rem;">Soldados en mesa: —</div>
+
+          <!-- Asignación manual rápida para cuando eligen lugar en el tablero físico -->
+          <div id="insp-assign-box" class="hidden" style="border-top:1px solid #334155; padding-top:0.45rem; margin-top:0.35rem;">
+            <div style="font-size:0.75rem; color:#cbd5e1; margin-bottom:0.3rem;">📍 Asignar/Cambiar dueño en el mapa:</div>
+            <div style="display:flex; gap:0.3rem; margin-bottom:0.35rem;">
+              <select id="insp-select-color" style="flex:1; padding:0.3rem; border-radius:5px; background:#0f172a; color:#fff; border:1px solid #475569; font-size:0.8rem;">
+                <option value="rojo">🔴 Rojo</option>
+                <option value="azul">🔵 Azul</option>
+                <option value="amarillo">🟡 Amarillo</option>
+                <option value="verde">🟢 Verde</option>
+                <option value="negro">⚫ Negro</option>
+                <option value="neutral">⚪ Libre / Neutral</option>
+              </select>
+              <input type="number" id="insp-input-soldados" value="1" min="1" max="25" style="width:52px; padding:0.3rem; border-radius:5px; background:#0f172a; color:#fff; border:1px solid #475569; font-size:0.8rem;" title="Soldados">
+            </div>
+            <button id="btn-map-assign-now" style="width:100%; padding:0.38rem; background:#2a9d8f; color:#fff; border:none; border-radius:5px; font-weight:800; cursor:pointer; font-size:0.8rem; margin-bottom:0.35rem;">
+              📍 Colocar en este País
+            </button>
+          </div>
+
+          <button id="btn-map-attack-now" class="hidden" style="width:100%; padding:0.42rem; background:#e63946; color:#fff; border:none; border-radius:6px; font-weight:800; cursor:pointer; font-size:0.84rem;">
+            ⚔️ ¡Atacar este País con Trivia!
           </button>
         </div>
       </div>
 
-      <!-- CONFIGURACIÓN RÁPIDA EN MESA HOST -->
+      <!-- CONFIGURACIÓN RÁPIDA DE LA PARTIDA EN MESA -->
       <div class="host-settings">
         <div>
-          <label>Mapa Activo:</label>
-          <select id="cfg-modo-mapa">
-            <option value="peru_mundo">Perú + Mundo (Global)</option>
-            <option value="peru">Solo Mapa del Perú 🇵🇪</option>
-            <option value="mundo">Solo Mapa Mundial 🌍</option>
+          <label>Inicio en Tablero Risk:</label>
+          <select id="cfg-modo-inicio">
+            <option value="tarjetas_estrellas">🎲 Suerte: 42 Tarjetas (★1 / ★★2)</option>
+            <option value="eleccion_mapa">📍 Elegir Lugar en el Mapa</option>
           </select>
         </div>
         <div>
           <label>Banco de Preguntas:</label>
           <select id="cfg-banco-preg">
-            <option value="mixto">Mixto (Perú + Mundo)</option>
-            <option value="peru">Exclusivo Perú 🇵🇪</option>
-            <option value="mundo">Exclusivo Mundo 🌍</option>
+            <option value="mixto">🇵🇪 + 🌍 Mixto (Perú y Mundo)</option>
+            <option value="peru">🇵🇪 Exclusivo Perú (21 categorías)</option>
+            <option value="mundo">🌍 Exclusivo Mundo (27 categorías)</option>
           </select>
         </div>
         <div>
           <label>Comodines:</label>
           <select id="cfg-comodines-on">
-            <option value="true">Activos (14 tipos)</option>
+            <option value="true">Activos (Martillo, Loro, +12)</option>
             <option value="false">Desactivados</option>
           </select>
         </div>
         <div>
-          <label>Comodines base c/u:</label>
+          <label>Comodines c/u:</label>
           <input type="number" id="cfg-cant-comodines" value="3" min="1" max="5">
         </div>
         <div>
@@ -784,8 +802,8 @@
           <input type="number" id="cfg-tiempo" value="20" min="5" max="60">
         </div>
         <div>
-          <label>Máx. Ataques Seguidos:</label>
-          <input type="number" id="cfg-max-ataques" value="5" min="1" max="12">
+          <label>Ataques Seguidos:</label>
+          <input type="number" id="cfg-max-ataques" value="15" min="1" max="30" title="Mientras gane duelos puede seguir atacando">
         </div>
         <div>
           <label>¿Quién Inicia?</label>
@@ -795,7 +813,7 @@
         </div>
         <div style="display: flex; align-items: flex-end;">
           <button id="btn-aplicar-cfg" style="width:100%; padding:0.55rem; background:#2a9d8f; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-            💾 Guardar Reglas
+            💾 Aplicar Reglas
           </button>
         </div>
       </div>
@@ -930,6 +948,34 @@
     </div>
   </div>
 
+  <!-- MODAL: REPARTO DE LAS 42 TARJETAS DE RISK PARA ARMAR EL TABLERO FÍSICO -->
+  <div id="risk-cards-modal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:160;">
+    <div class="tv-wheel-card" style="max-width:950px; width:95%; max-height:88vh; overflow-y:auto; text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:0.8rem; margin-bottom:1rem;">
+        <div>
+          <h2 style="color:var(--gold); font-size:1.45rem;">🃏 Guía de Países y Tarjetas de Estrellas para el Tablero Físico Risk</h2>
+          <p style="color:#94a3b8; font-size:0.88rem; margin-top:0.2rem;">
+            Cada tarjeta oficial del juego de mesa Risk indica el país y cuántas estrellas tiene: <strong>★ (1 soldado)</strong> o <strong>★★ (2 soldados)</strong>.
+          </p>
+        </div>
+        <button id="btn-close-cards-modal" style="padding:0.55rem 1.1rem; background:#ef4444; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+          ✕ Cerrar
+        </button>
+      </div>
+
+      <div style="display:flex; gap:0.7rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <button onclick="dispararSorteoTarjetas('tarjetas_estrellas')" style="padding:0.6rem 1.1rem; background:linear-gradient(135deg,#f59e0b,#d97706); color:#000; border:none; border-radius:8px; font-weight:900; cursor:pointer;">
+          🎲 Volver a Sortear las 42 Tarjetas por Suerte (★1 / ★★2)
+        </button>
+        <button onclick="dispararSorteoTarjetas('eleccion_mapa')" style="padding:0.6rem 1.1rem; background:#2a9d8f; color:#fff; border:none; border-radius:8px; font-weight:800; cursor:pointer;">
+          📍 Cambiar a Modo Elegir Lugar Libremente
+        </button>
+      </div>
+
+      <div id="risk-cards-players-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:0.9rem;"></div>
+    </div>
+  </div>
+
   <script>
     const COLOR_HEX = {
       rojo: '#e63946',
@@ -952,6 +998,7 @@
 
     let estadoMapaActual = null;
     let territorioSeleccionado = null;
+    let listaJugadoresActual = [];
 
     // Estado de Zoom y Desplazamiento (Pan) del Mapa
     let mapZoom = 1;
@@ -979,7 +1026,7 @@
     };
 
     svgMap.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('territory-poly')) return;
+      if (e.target.closest('.risk-node-group')) return;
       isDraggingMap = true;
       dragStartX = e.clientX - mapPanX;
       dragStartY = e.clientY - mapPanY;
@@ -1012,10 +1059,40 @@
       document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
     });
 
+    // Botones de Sorteo de Tarjetas Risk (★1 / ★★2) y Modo Elegir Lugar
+    window.dispararSorteoTarjetas = function(modo) {
+      document.getElementById('cfg-modo-inicio').value = modo;
+      socket.emit('sortear_tarjetas_inicio', { modo });
+      window.soundFX.play('wheel');
+    };
+
+    document.getElementById('btn-sortear-tarjetas').addEventListener('click', () => {
+      dispararSorteoTarjetas('tarjetas_estrellas');
+      document.getElementById('risk-cards-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-modo-elegir').addEventListener('click', () => {
+      dispararSorteoTarjetas('eleccion_mapa');
+    });
+
+    document.getElementById('btn-ver-reparto').addEventListener('click', () => {
+      renderizarModalTarjetasRisk();
+      document.getElementById('risk-cards-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-close-cards-modal').addEventListener('click', () => {
+      document.getElementById('risk-cards-modal').classList.add('hidden');
+    });
+
+    socket.on('tarjetas_inicio_repartidas', () => {
+      renderizarModalTarjetasRisk();
+    });
+
     // Guardar configuración desde Mesa Host
     document.getElementById('btn-aplicar-cfg').addEventListener('click', () => {
+      const modoInicio = document.getElementById('cfg-modo-inicio').value;
       socket.emit('guardar_configuracion', {
-        modoMapa: document.getElementById('cfg-modo-mapa').value,
+        modoAsignacionInicial: modoInicio,
         modoBancoPreguntas: document.getElementById('cfg-banco-preg').value,
         comodinesHabilitados: document.getElementById('cfg-comodines-on').value === 'true',
         cantComodines: document.getElementById('cfg-cant-comodines').value,
@@ -1024,17 +1101,11 @@
       });
       socket.emit('fijar_primer_turno', { colorOId: selPrimerTurno.value });
       window.soundFX.play('select');
-      mostrarAlerta('⚙️ Reglas y configuración actualizadas.');
-    });
-
-    document.getElementById('btn-reset-map').addEventListener('click', () => {
-      if (confirm('¿Reiniciar la campaña y repartir nuevamente todos los territorios?')) {
-        socket.emit('reiniciar_mapa_partida');
-      }
+      mostrarAlerta('⚙️ Reglas del tablero físico Risk y preguntas actualizadas.');
     });
 
     document.getElementById('btn-abort-match').addEventListener('click', () => {
-      if (confirm('¿Terminar el combate actual y volver al Mapa Estratégico?')) {
+      if (confirm('¿Terminar el duelo actual y volver al Mapa de Risk?')) {
         socket.emit('forzar_terminar_juego');
       }
     });
@@ -1046,15 +1117,20 @@
     });
 
     // =====================================================================
-    // RENDERIZADO DEL MAPA INTERACTIVO ESTILO RISK / TRIVIADOR
+    // RENDERIZADO DEL MAPA CLÁSICO DE RISK (42 TERRITORIOS + ESTRELLAS ★/★★)
     // =====================================================================
     socket.on('mapa_actualizado', (estado) => {
       estadoMapaActual = estado;
       renderizarMapaInteractivo(estado);
       renderizarBitacora(estado.historialMovimientos || []);
-      document.getElementById('badge-ronda').textContent = `Ronda ${estado.rondaActual || 1} / ${estado.rondasMaximas || 12}`;
+      renderizarModalTarjetasRisk();
+
+      const modoIni = estado.configuracion?.modoAsignacionInicial || 'tarjetas_estrellas';
+      document.getElementById('badge-modo-inicio').textContent =
+        modoIni === 'eleccion_mapa' ? '📍 Modo: Elegir Lugar' : '🃏 Modo: 42 Tarjetas (★1 / ★★2)';
+      document.getElementById('badge-ronda').textContent = `Ronda ${estado.rondaActual || 1}`;
       document.getElementById('badge-consecutivo').textContent =
-        `Ataques en turno: ${estado.ataquesRealizados || 0} / ${estado.maxAtaquesConsecutivos || 5}`;
+        `Ataques seguidos: ${estado.ataquesRealizados || 0}`;
     });
 
     function renderizarMapaInteractivo(estado) {
@@ -1066,72 +1142,63 @@
       terrLayer.innerHTML = '';
       badgeLayer.innerHTML = '';
 
-      const mapaTer = {};
-      (estado.territorios || []).forEach(t => { mapaTer[t.codigo] = t; });
-      const atacables = new Set(estado.territoriosAtacables || []);
-
-      // 1. Dibujar líneas de conexión entre territorios vecinos
-      const paresDibujados = new Set();
+      // Dibujar fichas circulares sobre cada uno de los 42 territorios del mapa clásico de Risk
       (estado.territorios || []).forEach(t => {
-        (t.vecinos || []).forEach(vecCod => {
-          const v = mapaTer[vecCod];
-          if (!v) return;
-          const parKey = [t.codigo, v.codigo].sort().join('--');
-          if (paresDibujados.has(parKey)) return;
-          paresDibujados.add(parKey);
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'risk-node-group');
+        g.style.cursor = 'pointer';
+        g.addEventListener('click', () => seleccionarTerritorioEnHost(t));
 
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', t.centroX);
-          line.setAttribute('y1', t.centroY);
-          line.setAttribute('x2', v.centroX);
-          line.setAttribute('y2', v.centroY);
-          const esRutaAtaque = (t.propietarioColor === estado.atacanteColor && atacables.has(v.codigo)) ||
-                               (v.propietarioColor === estado.atacanteColor && atacables.has(t.codigo));
-          line.setAttribute('class', esRutaAtaque ? 'connection-line attack-route' : 'connection-line');
-          connLayer.appendChild(line);
-        });
-      });
+        const colorFill = COLOR_HEX[t.propietarioColor] || COLOR_HEX.neutral;
+        const esSeleccionado = territorioSeleccionado && territorioSeleccionado.codigo === t.codigo;
 
-      // 2. Dibujar polígonos de territorios y medallas de soldados
-      (estado.territorios || []).forEach(t => {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', t.svgPath);
-        path.setAttribute('fill', COLOR_HEX[t.propietarioColor] || COLOR_HEX.neutral);
-        path.setAttribute('filter', 'url(#glow-shadow)');
+        // Halo exterior si está seleccionado o bajo ataque
+        if (esSeleccionado || t.bajoAtaque) {
+          const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          halo.setAttribute('cx', t.centroX);
+          halo.setAttribute('cy', t.centroY);
+          halo.setAttribute('r', 22);
+          halo.setAttribute('fill', 'none');
+          halo.setAttribute('stroke', t.bajoAtaque ? '#ff0055' : '#ffd700');
+          halo.setAttribute('stroke-width', '3.5');
+          halo.setAttribute('stroke-dasharray', '4,3');
+          g.appendChild(halo);
+        }
 
-        let cls = 'territory-poly';
-        if (atacables.has(t.codigo)) cls += ' attackable-highlight';
-        if (t.bajoAtaque) cls += ' under-attack';
-        path.setAttribute('class', cls);
-        path.dataset.codigo = t.codigo;
-
-        path.addEventListener('click', () => seleccionarTerritorioEnHost(t));
-        terrLayer.appendChild(path);
-
-        // Nombre del territorio
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', t.centroX);
-        label.setAttribute('y', t.centroY - 16);
-        label.setAttribute('class', 'territory-label');
-        label.textContent = t.nombre;
-        badgeLayer.appendChild(label);
-
-        // Círculo indicador de tropas
+        // Ficha principal de ejército en el país
         const badgeCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         badgeCircle.setAttribute('cx', t.centroX);
-        badgeCircle.setAttribute('cy', t.centroY + 4);
-        badgeCircle.setAttribute('r', 14);
-        badgeCircle.setAttribute('fill', '#0f172a');
-        badgeCircle.setAttribute('class', 'troop-badge-bg');
-        badgeLayer.appendChild(badgeCircle);
+        badgeCircle.setAttribute('cy', t.centroY);
+        badgeCircle.setAttribute('r', 15);
+        badgeCircle.setAttribute('fill', colorFill);
+        badgeCircle.setAttribute('stroke', '#ffffff');
+        badgeCircle.setAttribute('stroke-width', '2.2');
+        badgeCircle.setAttribute('filter', 'url(#glow-shadow)');
+        g.appendChild(badgeCircle);
 
+        // Cantidad de soldados (1 o 2 según estrellas de tarjeta, o más)
         const troopTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         troopTxt.setAttribute('x', t.centroX);
-        troopTxt.setAttribute('y', t.centroY + 4);
+        troopTxt.setAttribute('y', t.centroY - 1);
         troopTxt.setAttribute('class', 'troop-badge-txt');
-        const extras = `${t.esCapital ? '👑' : ''}${t.escudoActivo ? '🛡️' : ''}${t.proteccionTurnos > 0 ? '🏰' : ''}`;
-        troopTxt.textContent = `${t.soldados}${extras}`;
-        badgeLayer.appendChild(troopTxt);
+        troopTxt.setAttribute('fill', t.propietarioColor === 'amarillo' ? '#000' : '#fff');
+        troopTxt.style.fontSize = '11px';
+        troopTxt.textContent = `${t.soldados}`;
+        g.appendChild(troopTxt);
+
+        // Estrellas de la tarjeta oficial del territorio (★ o ★★) debajo del número
+        const starTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        starTxt.setAttribute('x', t.centroX);
+        starTxt.setAttribute('y', t.centroY + 9);
+        starTxt.setAttribute('text-anchor', 'middle');
+        starTxt.setAttribute('fill', t.propietarioColor === 'amarillo' ? '#222' : '#fde047');
+        starTxt.style.fontSize = '8px';
+        starTxt.style.fontWeight = '900';
+        starTxt.style.pointerEvents = 'none';
+        starTxt.textContent = '★'.repeat(t.estrellasTarjeta || 1);
+        g.appendChild(starTxt);
+
+        badgeLayer.appendChild(g);
       });
     }
 
@@ -1139,10 +1206,29 @@
       territorioSeleccionado = ter;
       window.soundFX.play('select');
       socket.emit('seleccionar_territorio_mapa', { territorioCodigo: ter.codigo });
+      renderizarMapaInteractivo(estadoMapaActual);
 
-      document.getElementById('insp-name').textContent = `${ter.mapa === 'peru' ? '🇵🇪' : '🌍'} ${ter.nombre}`;
-      document.getElementById('insp-owner').textContent = `Imperio: ${ter.propietarioNombre} (${ter.propietarioColor.toUpperCase()})`;
-      document.getElementById('insp-troops').textContent = `Soldados: ${ter.soldados} 💂 | Valor: +${ter.puntosValor} pts`;
+      const estrellasStr = '★'.repeat(ter.estrellasTarjeta || 1);
+      document.getElementById('insp-name').textContent = `📍 ${ter.nombre}`;
+      document.getElementById('insp-stars').textContent = `Tarjeta Risk: ${estrellasStr} (${ter.estrellasTarjeta || 1} soldado${(ter.estrellasTarjeta || 1) > 1 ? 's' : ''})`;
+      document.getElementById('insp-owner').textContent = `Ocupado por: ${ter.propietarioNombre} (${ter.propietarioColor.toUpperCase()})`;
+      document.getElementById('insp-troops').textContent = `Soldados en mesa: ${ter.soldados} 💂 | ${ter.subregion || ''}`;
+
+      // Mostrar controles para asignar/cambiar dueño en el tablero físico
+      const assignBox = document.getElementById('insp-assign-box');
+      assignBox.classList.remove('hidden');
+      document.getElementById('insp-select-color').value = ter.propietarioColor || 'rojo';
+      document.getElementById('insp-input-soldados').value = ter.soldados || ter.estrellasTarjeta || 1;
+
+      document.getElementById('btn-map-assign-now').onclick = () => {
+        const col = document.getElementById('insp-select-color').value;
+        const slds = parseInt(document.getElementById('insp-input-soldados').value, 10) || ter.estrellasTarjeta || 1;
+        socket.emit('elegir_territorio_mapa', {
+          territorioCodigo: ter.codigo,
+          colorJugador: col,
+          soldados: slds
+        });
+      };
 
       const btnAttackNow = document.getElementById('btn-map-attack-now');
       const esAtacable = estadoMapaActual &&
@@ -1165,6 +1251,46 @@
       }
     }
 
+    function renderizarModalTarjetasRisk() {
+      const grid = document.getElementById('risk-cards-players-grid');
+      if (!grid || !estadoMapaActual) return;
+
+      const territorios = estadoMapaActual.territorios || [];
+      if (listaJugadoresActual.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; padding:1rem; background:#1e293b; border-radius:10px; color:#cbd5e1;">
+          Aún no hay jugadores registrados. Cuando se unan desde sus celulares (o cuando presiones <strong>Sortear 42 Tarjetas</strong>), verás aquí exactamente qué países y cuántos soldados (★1 o ★★2) le tocan a cada color en el tablero físico.
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = listaJugadoresActual.map(j => {
+        const misPaises = territorios.filter(t => t.propietarioColor === j.color);
+        const totalSoldadosIniciales = misPaises.reduce((acc, t) => acc + (t.soldados || 1), 0);
+        return `
+          <div style="background:#0f172a; border:2px solid var(--${j.color}); border-radius:12px; padding:0.9rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:0.5rem; margin-bottom:0.6rem;">
+              <strong style="font-size:1.05rem; color:var(--${j.color === 'negro' ? 'gold' : j.color});">
+                👑 ${j.nombre} (${j.color.toUpperCase()})
+              </strong>
+              <span style="font-size:0.8rem; background:#1e293b; padding:0.2rem 0.55rem; border-radius:12px;">
+                🏳️ ${misPaises.length} países | 💂 ${totalSoldadosIniciales} soldados
+              </span>
+            </div>
+            <div style="max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:0.35rem; font-size:0.84rem;">
+              ${misPaises.length === 0
+                ? '<span style="color:#64748b;">Sin territorios asignados todavía.</span>'
+                : misPaises.map(p => `
+                  <div style="display:flex; justify-content:space-between; background:#162032; padding:0.35rem 0.6rem; border-radius:6px;">
+                    <span>📍 <strong>${p.nombre}</strong> <small style="color:#94a3b8;">(${p.subregion})</small></span>
+                    <span style="color:#fde047; font-weight:900;">${'★'.repeat(p.estrellasTarjeta || 1)} (${p.soldados} 💂)</span>
+                  </div>
+                `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function renderizarBitacora(movimientos) {
       const list = document.getElementById('war-log-list');
       if (!movimientos || movimientos.length === 0) return;
@@ -1177,12 +1303,14 @@
 
     // Renderizar Comandantes y Estadísticas en vivo
     socket.on('actualizacion_jugadores', (jugadores) => {
+      listaJugadoresActual = jugadores || [];
       lobbyPlayers.innerHTML = '';
       const prevVal = selPrimerTurno.value;
       selPrimerTurno.innerHTML = '<option value="aleatorio">Aleatorio</option>';
 
       if (jugadores.length === 0) {
         lobbyPlayers.innerHTML = '<p style="color:#64748b; font-size:0.9rem;">Esperando que los comandantes escaneen el QR...</p>';
+        renderizarModalTarjetasRisk();
         return;
       }
 
@@ -1191,12 +1319,14 @@
         tag.className = 'player-tag';
         tag.style.backgroundColor = `var(--${j.color})`;
         tag.style.color = (j.color === 'amarillo') ? '#000' : '#fff';
+        const numTarjetas = Array.isArray(j.tarjetasRisk) ? j.tarjetasRisk.length : 0;
+        const estrellas = j.estrellasAcumuladas || 0;
         tag.innerHTML = `
           <div style="text-align:left;">
-            <div>${j.nombre}</div>
+            <div>${j.nombre} (${j.color.toUpperCase()})</div>
             <div class="player-stats-mini">
-              <span>🏳️ ${j.territoriosCount || 0} terr.</span>
-              <span>💂 ${j.soldadosTotales || 0}</span>
+              <span>🏳️ ${j.territoriosCount || 0} países</span>
+              <span>🃏 ${numTarjetas} tarj. (${estrellas}★)</span>
               <span>🏆 ${j.puntos || 0} pts</span>
             </div>
           </div>
@@ -1210,17 +1340,18 @@
         selPrimerTurno.appendChild(opt);
       });
       if (prevVal) selPrimerTurno.value = prevVal;
+      renderizarModalTarjetasRisk();
     });
 
     window.kick = function(socketId) { socket.emit('expulsar_jugador', { socketId }); };
 
-    socket.on('turno_actualizado', ({ atacanteNombre, atacanteColor, ataquesRealizados, maxAtaquesConsecutivos }) => {
+    socket.on('turno_actualizado', ({ atacanteNombre, atacanteColor, ataquesRealizados }) => {
       if (atacanteNombre) {
         const extraMsg = ataquesRealizados > 0
-          ? ` — 🔥 ¡Racha de conquista activa (${ataquesRealizados}/${maxAtaquesConsecutivos})! Puede seguir atacando o finalizar turno.`
-          : ' — Selecciona un territorio enemigo en el móvil o en el mapa.';
+          ? ` — 🔥 ¡Lleva ${ataquesRealizados} victoria(s) seguida(s)! Puede seguir atacando en el tablero físico o pasar turno.`
+          : ' — Elige a quién atacar en el tablero físico desde tu celular.';
         document.getElementById('lobby-status').textContent =
-          `🎯 Turno: ${atacanteNombre} (${atacanteColor.toUpperCase()})${extraMsg}`;
+          `🎯 Turno en Mesa: ${atacanteNombre} (${atacanteColor.toUpperCase()})${extraMsg}`;
       }
     });
 
@@ -1270,7 +1401,7 @@
     });
 
     // =====================================================================
-    // COMIENZO Y RESOLUCIÓN DEL DUELO CON SOLDADOS ANIMADOS
+    // COMIENZO Y RESOLUCIÓN DEL DUELO CON INSTRUCCIONES PARA TABLERO FÍSICO
     // =====================================================================
     function renderizarIconosSoldados(cantidad, icono = '💂') {
       const n = Math.max(0, Math.min(8, parseInt(cantidad) || 0));
@@ -1302,22 +1433,22 @@
       document.getElementById('tag-guess-def').style.display = 'none';
 
       // Metadatos del duelo y pregunta
-      document.getElementById('duel-badge-territory').textContent = `📍 Objetivo: ${datos.defensor.territorioNombre || 'Territorio'}`;
+      document.getElementById('duel-badge-territory').textContent = `📍 Disputa: ${datos.defensor.territorioNombre || 'Tablero Físico Risk'}`;
       document.getElementById('duel-badge-bank').textContent = datos.pregunta.banco === 'peru' ? '🇵🇪 Banco Perú' : '🌍 Banco Mundial';
       document.getElementById('duel-badge-cat').textContent = `📚 ${(datos.pregunta.categoria || 'general').replace(/_/g, ' ').toUpperCase()}`;
       document.getElementById('duel-badge-diff').textContent = `⭐ Nivel: ${(datos.pregunta.dificultad || 'basico').toUpperCase()}`;
-      document.getElementById('duel-badge-streak').textContent = `🔥 Asalto #${datos.ataqueConsecutivoNum || 1} de ${datos.maxAtaquesConsecutivos || 5}`;
+      document.getElementById('duel-badge-streak').textContent = `🔥 Ataque #${datos.ataqueConsecutivoNum || 1}`;
 
       // Paneles de soldados atacante y defensor
-      document.getElementById('name-at').textContent = datos.atacante.nombre;
+      document.getElementById('name-at').textContent = `${datos.atacante.nombre} (${datos.atacante.color.toUpperCase()})`;
       document.getElementById('panel-at').style.borderColor = `var(--${datos.atacante.color})`;
       document.getElementById('troops-icons-at').textContent = renderizarIconosSoldados(datos.atacante.soldados || 3, '⚔️');
-      document.getElementById('territory-at-lbl').textContent = `Desde: ${datos.atacante.territorioNombre || 'Base'}`;
+      document.getElementById('territory-at-lbl').textContent = `Ejército ${datos.atacante.color.toUpperCase()}`;
 
-      document.getElementById('name-def').textContent = datos.defensor.nombre;
+      document.getElementById('name-def').textContent = `${datos.defensor.nombre} (${datos.defensor.color.toUpperCase()})`;
       document.getElementById('panel-def').style.borderColor = `var(--${datos.defensor.color})`;
       document.getElementById('troops-icons-def').textContent = renderizarIconosSoldados(datos.defensor.soldados || 2, '🛡️');
-      document.getElementById('territory-def-lbl').textContent = `Defiende: ${datos.defensor.territorioNombre || 'Territorio'}`;
+      document.getElementById('territory-def-lbl').textContent = `Defiende: ${datos.defensor.territorioNombre || datos.defensor.color.toUpperCase()}`;
 
       document.getElementById('question-text').textContent = datos.pregunta.pregunta;
       if (!isAprox) {
@@ -1356,33 +1487,19 @@
         document.getElementById('panel-def').classList.remove('clash-anim');
       }, 700);
 
-      // Resumen de combate territorial (soldados y conquista)
       let subTerritorial = '';
-      if (res.combateTerritorial) {
-        const ct = res.combateTerritorial;
-        if (ct.territorioOrigen) {
-          document.getElementById('troops-icons-at').textContent = renderizarIconosSoldados(ct.territorioOrigen.soldadosDespues, '⚔️');
-        }
-        if (ct.territorioObjetivo) {
-          document.getElementById('troops-icons-def').textContent = renderizarIconosSoldados(ct.territorioObjetivo.soldadosDespues, '🛡️');
-        }
-
-        if (ct.territorioConquistado && ct.territorioObjetivo) {
-          window.soundFX.play('conquest');
-          subTerritorial = `<br><span style="color:#ffd700; font-size:1.15rem;">🏴 ¡TERRITORIO CONQUISTADO: ${ct.territorioObjetivo.nombre.toUpperCase()}!</span>`;
-        } else if (ct.defensaExitosa && ct.territorioObjetivo) {
-          window.soundFX.play('defense');
-          subTerritorial = `<br><span style="color:#38bdf8; font-size:1.1rem;">🛡️ ¡DEFENSA EXITOSA EN ${ct.territorioObjetivo.nombre.toUpperCase()}! (-${ct.bajasAtacante} tropa atacante)</span>`;
-        } else if (ct.bajasDefensor > 0 && ct.territorioObjetivo) {
-          window.soundFX.play('correct');
-          subTerritorial = `<br><span style="color:#fcd34d; font-size:1.05rem;">💥 Guarnición de ${ct.territorioObjetivo.nombre} pierde ${ct.bajasDefensor} soldado(s).</span>`;
-        }
-      } else {
-        window.soundFX.play('correct');
+      if (res.instruccionTableroFisico) {
+        subTerritorial += `<br><span style="color:#fde047; font-size:1.1rem;">🎲 EN EL TABLERO FÍSICO: ${res.instruccionTableroFisico}</span>`;
       }
-
+      if (res.tarjetaGanada) {
+        const stars = '★'.repeat(res.tarjetaGanada.estrellas || 1);
+        subTerritorial += `<br><span style="color:#a7f3d0; font-size:1rem;">🃏 Tarjeta Risk Obtenida: <strong>${res.tarjetaGanada.nombre} (${stars} = ${res.tarjetaGanada.estrellas} soldado${res.tarjetaGanada.estrellas > 1 ? 's' : ''})</strong></span>`;
+      }
       if (res.turnoContinua) {
-        subTerritorial += `<br><span style="font-size:0.95rem; color:#a7f3d0;">⚡ ¡Fase de Ataque Consecutivo activa! ${res.atacante.nombre} conserva el turno para seguir atacando.</span>`;
+        window.soundFX.play('conquest');
+        subTerritorial += `<br><span style="font-size:0.95rem; color:#ffffff;">⚡ ¡${res.atacante.nombre} conserva su turno y puede seguir atacando en el tablero!</span>`;
+      } else if (res.ganador) {
+        window.soundFX.play('defense');
       }
 
       if (res.ganador) {
@@ -1397,7 +1514,7 @@
         winnerBanner.style.display = 'block';
       } else {
         window.soundFX.play('wrong');
-        winnerBanner.innerHTML = `🛡️ ASALTO RECHAZADO <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>`;
+        winnerBanner.innerHTML = `🛡️ ASALTO RECHAZADO <br><span style="font-size:1.1rem; font-weight:normal;">${res.motivo}</span>${subTerritorial}`;
         winnerBanner.style.background = '#475569';
         winnerBanner.style.color = '#fff';
         winnerBanner.style.display = 'block';
@@ -1456,7 +1573,7 @@
         setTimeout(() => {
           viewBattle.classList.add('hidden');
           viewLobby.classList.remove('hidden');
-        }, 6000);
+        }, 6200);
       }
     });
 
@@ -1499,7 +1616,7 @@
     function mostrarAlerta(msg) {
       bannerAlert.textContent = msg;
       bannerAlert.style.display = 'block';
-      setTimeout(() => bannerAlert.style.display = 'none', 4000);
+      setTimeout(() => bannerAlert.style.display = 'none', 4500);
     }
   </script>
 </body>

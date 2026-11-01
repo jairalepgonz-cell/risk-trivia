@@ -435,7 +435,66 @@ io.on('connection', async (socket) => {
   socket.on('reiniciar_mapa_partida', async () => {
     clearInterval(timerInterval);
     gameManager.reiniciarPartidaCompleta();
-    io.emit('alerta_comodin_publico', { mensaje: '🗺️ ¡Mapa y partida reiniciados para una nueva campaña!' });
+    io.emit('alerta_comodin_publico', { mensaje: '🗺️ ¡Tablero Risk y partida reiniciados para una nueva campaña!' });
+    await broadcastTurnoYMapa();
+  });
+
+  // =========================================================================
+  // REGLAS TABLERO FÍSICO RISK: SORTEO DE 42 TARJETAS (★1 / ★★2) O ELEGIR LUGAR
+  // =========================================================================
+  socket.on('sortear_tarjetas_inicio', async ({ modo } = {}) => {
+    const modoSeleccionado = modo || 'tarjetas_estrellas';
+    const res = gameManager.repartirTerritoriosPorModo(modoSeleccionado);
+    const msg = modoSeleccionado === 'eleccion_mapa'
+      ? '📍 ¡Modo ELEGIR LUGAR EN EL MAPA activado! Cada comandante puede elegir qué territorios ocupar en el tablero físico.'
+      : '🎲 ¡42 Tarjetas Oficiales de Risk repartidas por suerte! Revisen en pantalla o en su celular cuántos soldados (★1 o ★★2) poner en cada país del tablero físico.';
+    io.emit('alerta_comodin_publico', { mensaje: msg });
+    io.emit('tarjetas_inicio_repartidas', { modo: modoSeleccionado, ...res });
+    io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
+    await broadcastTurnoYMapa();
+  });
+
+  socket.on('elegir_territorio_mapa', async ({ territorioCodigo, colorJugador, soldados }) => {
+    const jug = gameManager.jugadores[socket.id];
+    const colorFinal = colorJugador || (jug ? jug.color : null);
+    if (!colorFinal) return socket.emit('error_juego', 'Selecciona o regístrate con un color primero.');
+
+    const res = gameManager.asignarTerritorioManual(territorioCodigo, colorFinal, soldados);
+    if (!res.exito) return socket.emit('error_juego', res.error);
+
+    io.emit('alerta_comodin_publico', {
+      mensaje: `📍 ${res.territorio.nombre} asignado al ejército ${colorFinal.toUpperCase()} con ${res.territorio.soldados} soldado(s) (${'★'.repeat(res.territorio.estrellasTarjeta || 1)}).`
+    });
+    io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
+    await broadcastTurnoYMapa();
+  });
+
+  socket.on('robar_tarjeta_risk', async ({ socketId } = {}) => {
+    const targetId = socketId || socket.id;
+    const res = gameManager.robarTarjetaManual(targetId);
+    if (!res.exito) return socket.emit('error_juego', res.error);
+
+    const jug = gameManager.jugadores[targetId];
+    socket.emit('tarjeta_risk_recibida', res);
+    if (targetId !== socket.id) io.to(targetId).emit('tarjeta_risk_recibida', res);
+    io.emit('alerta_comodin_publico', {
+      mensaje: `🃏 ¡${jug ? jug.nombre : 'Comandante'} robó tarjeta Risk: ${res.tarjeta.nombre} (${'★'.repeat(res.tarjeta.estrellas)} = ${res.tarjeta.estrellas} soldado${res.tarjeta.estrellas > 1 ? 's' : ''})!`
+    });
+    io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
+    await broadcastTurnoYMapa();
+  });
+
+  socket.on('canjear_estrellas_risk', async ({ socketId } = {}) => {
+    const targetId = socketId || socket.id;
+    const res = gameManager.canjearEstrellasRisk(targetId);
+    if (!res.exito) return socket.emit('error_juego', res.error);
+
+    socket.emit('estrellas_canjeadas_ok', res);
+    if (targetId !== socket.id) io.to(targetId).emit('estrellas_canjeadas_ok', res);
+    io.emit('alerta_comodin_publico', {
+      mensaje: res.mensajeTableroFisico
+    });
+    io.emit('actualizacion_jugadores', Object.values(gameManager.jugadores));
     await broadcastTurnoYMapa();
   });
 

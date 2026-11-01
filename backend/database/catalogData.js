@@ -1,5 +1,5 @@
 // =========================================================================
-// CATÁLOGOS DE CATEGORÍAS, COMODINES, REGLAS Y TERRITORIOS (PERÚ Y MUNDO)
+// CATÁLOGOS DE CATEGORÍAS, COMODINES, REGLAS Y LOS 42 TERRITORIOS OFICIALES DE RISK
 // =========================================================================
 
 const DIFICULTADES = [
@@ -63,19 +63,19 @@ const CATEGORIAS = [
   { codigo: 'actualidad_internacional', nombre: 'Actualidad Internacional', ambito: 'mundo', subambito: 'Sociedad', icono: '🛰️', color: '#3a86ff', descripcion: 'Acontecimientos globales del siglo XXI, cumbres, ciencia moderna y sociedad actual.', probabilidad: 90 },
 
   // --- CATEGORÍAS ESPECIALES ESTILO TV (5) ---
-  { codigo: 'ruleta_dorada', nombre: 'Ruleta Dorada (Doble Botín)', ambito: 'especial', subambito: 'TV Especial', icono: '🎡', color: '#ffd700', descripcion: 'Categoría especial de TV: combina preguntas de alta exigencia con bonificación de puntos.', es_especial: 1, es_sorpresa: 0, probabilidad: 40 },
+  { codigo: 'ruleta_dorada', nombre: 'Ruleta Dorada (+1 Estrella)', ambito: 'especial', subambito: 'TV Especial', icono: '🎡', color: '#ffd700', descripcion: 'Categoría especial de TV: si ganas el combate recibes una tarjeta con estrella extra.', es_especial: 1, es_sorpresa: 0, probabilidad: 40 },
   { codigo: 'caja_sorpresa', nombre: 'Caja Sorpresa Misteriosa', ambito: 'especial', subambito: 'TV Especial', icono: '🎁', color: '#ff006e', descripcion: '¡Categoría oculta! El tema exacto se descubre al abrir el pergamino.', es_especial: 1, es_sorpresa: 1, probabilidad: 45 },
-  { codigo: 'desafio_experto', nombre: 'Desafío Maestro (Avanzado)', ambito: 'especial', subambito: 'TV Especial', icono: '🔥', color: '#d90429', descripcion: 'Ronda de conocimientos especializados de nivel Avanzado con tropas extra.', es_especial: 1, es_sorpresa: 0, probabilidad: 35 },
-  { codigo: 'duelo_peru_mundo', nombre: 'Fusión Perú & Mundo', ambito: 'especial', subambito: 'TV Especial', icono: '🌎', color: '#00f5d4', descripcion: 'Combinación dinámica de patrimonio peruano e historia universal.', es_especial: 1, es_sorpresa: 0, probabilidad: 50 },
+  { codigo: 'desafio_experto', nombre: 'Desafío Maestro (★★ 2 Soldados)', ambito: 'especial', subambito: 'TV Especial', icono: '🔥', color: '#d90429', descripcion: 'Ronda de conocimientos de nivel Avanzado: vale por 2 soldados en el tablero físico.', es_especial: 1, es_sorpresa: 0, probabilidad: 35 },
+  { codigo: 'duelo_peru_mundo', nombre: 'Fusión Perú & Mundo', ambito: 'especial', subambito: 'TV Especial', icono: '🌎', color: '#00f5d4', descripcion: 'Combinación dinámica de cultura peruana e historia universal.', es_especial: 1, es_sorpresa: 0, probabilidad: 50 },
   { codigo: 'cultura_peruana', nombre: 'Especial Cultura Peruana', ambito: 'peru', subambito: 'Cultura', icono: '🇵🇪', color: '#e63946', descripcion: 'Selección integral de historia, geografía, gastronomía y tradiciones del Perú.', es_especial: 0, es_sorpresa: 0, probabilidad: 100 }
 ];
 
-// 14 COMODINES INSPIRADOS EN TRIVIADOR MUNDO
+// COMODINES ADAPTADOS PARA EL JUEGO DE MESA FÍSICO DE RISK + TRIVIA
 const COMODINES_CATALOGO = [
   {
     codigo: 'martillo',
     nombre: 'Martillo Demoledor',
-    descripcion: 'Golpea y destruye 2 alternativas incorrectas en preguntas de opción múltiple.',
+    descripcion: 'Golpea y elimina 2 alternativas incorrectas en preguntas de opción múltiple.',
     icono: '🔨',
     animacion: 'hammer-smash',
     tipo: 'pregunta',
@@ -96,7 +96,7 @@ const COMODINES_CATALOGO = [
   {
     codigo: 'loro',
     nombre: 'Loro Oráculo',
-    descripcion: 'Muestra la tendencia de acierto por alternativa o un rango de aproximación numérica.',
+    descripcion: 'Muestra el porcentaje de probabilidad por alternativa o un rango de años en la Diana.',
     icono: '🦜',
     animacion: 'parrot-fly',
     tipo: 'pregunta',
@@ -116,16 +116,16 @@ const COMODINES_CATALOGO = [
   },
   {
     codigo: 'cambio_categoria',
-    nombre: 'Cambio de Categoría',
-    descripcion: 'Permite elegir la categoría del duelo o reemplazar la categoría sorteada por otra.',
+    nombre: 'Comodín de Tema / Categoría',
+    descripcion: 'Permite elegir libremente la categoría del duelo (de Perú o del Mundo) al declarar un ataque.',
     icono: '🎯',
     animacion: 'wheel-spin',
     tipo: 'pregunta',
-    cantidad_inicial: 2,
-    limite_maximo: 4,
-    probabilidad_aparicion: 90,
-    costo_monedas: 120,
-    condiciones_uso: 'Al declarar ataque o durante la selección de categoría',
+    cantidad_inicial: 3,
+    limite_maximo: 5,
+    probabilidad_aparicion: 95,
+    costo_monedas: 100,
+    condiciones_uso: 'Al declarar un ataque desde el celular',
     duracion_turnos: 1,
     tiempo_reutilizacion: 0,
     modos_compatibles: 'todos',
@@ -138,7 +138,7 @@ const COMODINES_CATALOGO = [
   {
     codigo: 'eliminar_alternativa',
     nombre: 'Dardo Preciso (-1 Opción)',
-    descripcion: 'Retira 1 alternativa incorrecta de forma quirúrgica.',
+    descripcion: 'Descarta 1 alternativa incorrecta de la pregunta actual.',
     icono: '🎯',
     animacion: 'dart-hit',
     tipo: 'pregunta',
@@ -159,17 +159,17 @@ const COMODINES_CATALOGO = [
   {
     codigo: 'revelar_respuesta',
     nombre: 'Pergamino del Sabio',
-    descripcion: 'Revela una pista histórica/conceptual directa o la primera pista de verificación.',
+    descripcion: 'Muestra una pista directa sobre la respuesta correcta.',
     icono: '📜',
     animacion: 'scroll-glow',
     tipo: 'pregunta',
     cantidad_inicial: 2,
     limite_maximo: 4,
-    probabilidad_aparicion: 80,
-    costo_monedas: 150,
+    probabilidad_aparicion: 85,
+    costo_monedas: 120,
     condiciones_uso: 'Durante cualquier pregunta activa',
     duracion_turnos: 1,
-    tiempo_reutilizacion: 1,
+    tiempo_reutilizacion: 0,
     modos_compatibles: 'todos',
     activo: 1,
     disponibilidad_nivel: 1,
@@ -180,7 +180,7 @@ const COMODINES_CATALOGO = [
   {
     codigo: 'tiempo_adicional',
     nombre: 'Reloj de Arena (+10s)',
-    descripcion: 'Agrega 10 segundos adicionales al temporizador de la pregunta actual.',
+    descripcion: 'Agrega +10 segundos al reloj de la pregunta actual.',
     icono: '⏳',
     animacion: 'time-warp',
     tipo: 'pregunta',
@@ -201,36 +201,36 @@ const COMODINES_CATALOGO = [
   {
     codigo: 'segunda_oportunidad',
     nombre: 'Fénix (Segunda Oportunidad)',
-    descripcion: 'Si fallas la primera elección en opción múltiple, te permite sobrevivir o reintentar.',
+    descripcion: 'Si te equivocas en tu primera respuesta de opción múltiple, te permite elegir otra opción.',
     icono: '🦅',
     animacion: 'phoenix-rise',
     tipo: 'pregunta',
     cantidad_inicial: 1,
     limite_maximo: 3,
-    probabilidad_aparicion: 65,
-    costo_monedas: 200,
-    condiciones_uso: 'Activar antes de enviar respuesta en opción múltiple',
+    probabilidad_aparicion: 75,
+    costo_monedas: 180,
+    condiciones_uso: 'Activar antes de responder en opción múltiple',
     duracion_turnos: 1,
-    tiempo_reutilizacion: 2,
+    tiempo_reutilizacion: 1,
     modos_compatibles: 'todos',
     activo: 1,
-    disponibilidad_nivel: 2,
+    disponibilidad_nivel: 1,
     efecto_combate: 'evita_fallo_primera_opcion',
     efecto_pregunta: 'segunda_oportunidad',
     efecto_mapa: 'ninguno'
   },
   {
     codigo: 'doble_puntuacion',
-    nombre: 'Estandarte Real (x2 Puntos)',
-    descripcion: 'Multiplica x2 los puntos y otorga +1 soldado extra si ganas el duelo actual.',
-    icono: '👑',
+    nombre: 'Tarjeta ★★ Doble Estrella',
+    descripcion: 'Si ganas este duelo, recibes una tarjeta de ★★ 2 Estrellas (+1 soldado extra en el tablero físico).',
+    icono: '🌟',
     animacion: 'gold-burst',
     tipo: 'estrategico',
     cantidad_inicial: 2,
     limite_maximo: 4,
     probabilidad_aparicion: 80,
     costo_monedas: 140,
-    condiciones_uso: 'Antes o durante el duelo',
+    condiciones_uso: 'Durante el duelo antes de resolver',
     duracion_turnos: 1,
     tiempo_reutilizacion: 1,
     modos_compatibles: 'todos',
@@ -242,8 +242,8 @@ const COMODINES_CATALOGO = [
   },
   {
     codigo: 'escudo',
-    nombre: 'Escudo Imperial',
-    descripcion: 'Absorbe el daño en defensa: si pierdes un duelo defensivo, evita perder hasta 2 soldados.',
+    nombre: 'Escudo de Trinchera',
+    descripcion: 'Si pierdes el duelo defendiendo en el tablero físico, evita que retires 1 soldado de tu territorio.',
     icono: '🛡️',
     animacion: 'shield-wall',
     tipo: 'combate',
@@ -251,7 +251,7 @@ const COMODINES_CATALOGO = [
     limite_maximo: 4,
     probabilidad_aparicion: 85,
     costo_monedas: 150,
-    condiciones_uso: 'En tu turno sobre un territorio o al defenderte',
+    condiciones_uso: 'Al defender un territorio',
     duracion_turnos: 1,
     tiempo_reutilizacion: 1,
     modos_compatibles: 'todos',
@@ -263,16 +263,16 @@ const COMODINES_CATALOGO = [
   },
   {
     codigo: 'refuerzos',
-    nombre: 'Llamado de Reserva (+3 Soldados)',
-    descripcion: 'Despliega inmediatamente +3 soldados de élite en uno de tus territorios.',
-    icono: '⚔️',
+    nombre: 'Soldado de Reserva (+2 Soldados)',
+    descripcion: 'Te otorga permiso para colocar +2 soldados de refuerzo inmediatamente en tu tablero físico de Risk.',
+    icono: '💂',
     animacion: 'troop-drop',
     tipo: 'mapa',
-    cantidad_inicial: 2,
-    limite_maximo: 4,
+    cantidad_inicial: 1,
+    limite_maximo: 3,
     probabilidad_aparicion: 80,
     costo_monedas: 160,
-    condiciones_uso: 'Durante tu fase de ataque/estrategia en el mapa',
+    condiciones_uso: 'En tu turno',
     duracion_turnos: 1,
     tiempo_reutilizacion: 1,
     modos_compatibles: 'todos',
@@ -284,16 +284,16 @@ const COMODINES_CATALOGO = [
   },
   {
     codigo: 'ataque_especial',
-    nombre: 'Cañón de Asedio (+2 Daño)',
-    descripcion: 'Potencia tu invasión: si ganas el duelo ofensivo, infliges +2 bajas adicionales al territorio defensor.',
+    nombre: 'Cañón de Asedio (-2 al Defensor)',
+    descripcion: 'Si ganas este ataque, el defensor pierde 2 soldados de golpe en el tablero físico en vez de 1.',
     icono: '💣',
     animacion: 'cannon-blast',
     tipo: 'combate',
     cantidad_inicial: 2,
     limite_maximo: 4,
-    probabilidad_aparicion: 75,
+    probabilidad_aparicion: 80,
     costo_monedas: 170,
-    condiciones_uso: 'Al declarar un ataque o durante el duelo como atacante',
+    condiciones_uso: 'Durante el duelo como atacante',
     duracion_turnos: 1,
     tiempo_reutilizacion: 1,
     modos_compatibles: 'todos',
@@ -305,29 +305,29 @@ const COMODINES_CATALOGO = [
   },
   {
     codigo: 'congelar_rival',
-    nombre: 'Tormenta Glacial (Congelar)',
-    descripcion: 'Reduce en 5 segundos el tiempo de respuesta del rival o bloquea sus comodines en el duelo actual.',
+    nombre: 'Tormenta Glacial (Bloquea Comodines)',
+    descripcion: 'Impide que tu rival use el Martillo, el Loro o cualquier otro comodín en esta pregunta.',
     icono: '❄️',
     animacion: 'ice-freeze',
     tipo: 'combate',
     cantidad_inicial: 1,
     limite_maximo: 3,
-    probabilidad_aparicion: 65,
+    probabilidad_aparicion: 70,
     costo_monedas: 180,
-    condiciones_uso: 'Durante un duelo activo contra el oponente',
+    condiciones_uso: 'Durante el duelo',
     duracion_turnos: 1,
     tiempo_reutilizacion: 2,
     modos_compatibles: 'todos',
     activo: 1,
-    disponibilidad_nivel: 2,
+    disponibilidad_nivel: 1,
     efecto_combate: 'bloquea_comodines_rival',
     efecto_pregunta: 'penaliza_rival',
     efecto_mapa: 'ninguno'
   },
   {
     codigo: 'robar_puntos',
-    nombre: 'Corsario (Saqueo de Botín)',
-    descripcion: 'Si ganas el duelo actual, capturas el 15% de los puntos de oro del rival (máx. 250 pts).',
+    nombre: 'Corsario (Robar 1 Estrella ★)',
+    descripcion: 'Si ganas este duelo, le robas ★ 1 Estrella de tarjeta a tu rival.',
     icono: '🏴‍☠️',
     animacion: 'coin-steal',
     tipo: 'estrategico',
@@ -340,15 +340,15 @@ const COMODINES_CATALOGO = [
     tiempo_reutilizacion: 2,
     modos_compatibles: 'todos',
     activo: 1,
-    disponibilidad_nivel: 2,
+    disponibilidad_nivel: 1,
     efecto_combate: 'saquea_puntos_al_ganar',
     efecto_pregunta: 'ninguno',
     efecto_mapa: 'ninguno'
   },
   {
     codigo: 'proteccion_territorial',
-    nombre: 'Muralla Inca (Pacto de Inmunidad)',
-    descripcion: 'Protege un territorio propio impidiendo que sea conquistado durante toda una ronda.',
+    nombre: 'Tregua Diplomática',
+    descripcion: 'Anuncia en pantalla que uno de tus territorios en el tablero físico no puede ser atacado en esta ronda.',
     icono: '🏰',
     animacion: 'fortress-lock',
     tipo: 'mapa',
@@ -356,399 +356,164 @@ const COMODINES_CATALOGO = [
     limite_maximo: 2,
     probabilidad_aparicion: 55,
     costo_monedas: 220,
-    condiciones_uso: 'Durante tu turno sobre un territorio propio',
-    duracion_turnos: 2,
+    condiciones_uso: 'En tu turno',
+    duracion_turnos: 1,
     tiempo_reutilizacion: 3,
     modos_compatibles: 'todos',
     activo: 1,
-    disponibilidad_nivel: 2,
+    disponibilidad_nivel: 1,
     efecto_combate: 'inmunidad_conquista',
     efecto_pregunta: 'ninguno',
     efecto_mapa: 'proteger_territorio_ronda'
   }
 ];
 
-// CONFIGURACIONES Y REGLAS PARAMETRIZABLES
 const CONFIGURACIONES_INICIALES = [
   { clave: 'tiempoPorPregunta', valor: '20', tipo: 'number', grupo: 'reglas', descripcion: 'Tiempo en segundos para responder cada pregunta' },
   { clave: 'puntosRespuestaCorrecta', valor: '150', tipo: 'number', grupo: 'reglas', descripcion: 'Puntos base otorgados por respuesta correcta' },
   { clave: 'penalizacionRespuestaIncorrecta', valor: '30', tipo: 'number', grupo: 'reglas', descripcion: 'Puntos descontados por respuesta incorrecta' },
-  { clave: 'soldadosInicialesPorTerritorio', valor: '3', tipo: 'number', grupo: 'combate', descripcion: 'Cantidad inicial de soldados en cada territorio al repartir el mapa' },
-  { clave: 'refuerzosPorRonda', valor: '2', tipo: 'number', grupo: 'combate', descripcion: 'Soldados de refuerzo que recibe un jugador al iniciar su turno' },
-  { clave: 'maxAtaquesConsecutivos', valor: '5', tipo: 'number', grupo: 'combate', descripcion: 'Cantidad máxima de ataques consecutivos permitidos en un mismo turno (estilo Risk)' },
-  { clave: 'bajasPorDerrotaDefensor', valor: '2', tipo: 'number', grupo: 'combate', descripcion: 'Soldados que pierde el territorio defensor cuando el atacante gana el duelo' },
-  { clave: 'bajasPorDerrotaAtacante', valor: '1', tipo: 'number', grupo: 'combate', descripcion: 'Soldados que pierde el territorio atacante cuando el defensor gana el duelo' },
-  { clave: 'requiereVecindadParaAtacar', valor: 'true', tipo: 'boolean', grupo: 'mapa', descripcion: 'Exige que el territorio objetivo sea vecino de un territorio propio con al menos 2 soldados' },
-  { clave: 'permitirAtaquesConsecutivos', valor: 'true', tipo: 'boolean', grupo: 'combate', descripcion: 'Permite seguir atacando otros territorios tras ganar un combate sin perder el turno' },
+  { clave: 'soldadosInicialesPorTerritorio', valor: '1', tipo: 'number', grupo: 'combate', descripcion: 'Soldados base o según estrellas de tarjeta (★ 1 o ★★ 2)' },
+  { clave: 'refuerzosPorRonda', valor: '3', tipo: 'number', grupo: 'combate', descripcion: 'Soldados mínimos de refuerzo al iniciar turno en el tablero físico' },
+  { clave: 'maxAtaquesConsecutivos', valor: '15', tipo: 'number', grupo: 'combate', descripcion: 'Máximo de ataques consecutivos permitidos en un turno mientras el jugador quiera seguir atacando' },
+  { clave: 'bajasPorDerrotaDefensor', valor: '1', tipo: 'number', grupo: 'combate', descripcion: 'Soldados que retira el defensor en el tablero físico cuando pierde el duelo (2 si usa Cañón)' },
+  { clave: 'bajasPorDerrotaAtacante', valor: '1', tipo: 'number', grupo: 'combate', descripcion: 'Soldados que retira el atacante en el tablero físico cuando pierde el duelo' },
+  { clave: 'requiereVecindadParaAtacar', valor: 'false', tipo: 'boolean', grupo: 'mapa', descripcion: 'Desactivado por defecto para permitir atacar libremente según el tablero físico de mesa' },
+  { clave: 'permitirAtaquesConsecutivos', valor: 'true', tipo: 'boolean', grupo: 'combate', descripcion: 'Permite al atacante seguir atacando en su turno hasta que decida pasar turno o pierda' },
   { clave: 'comodinesHabilitados', valor: 'true', tipo: 'boolean', grupo: 'comodines', descripcion: 'Habilita o deshabilita el uso de comodines en la partida' },
-  { clave: 'modoMapa', valor: 'peru_mundo', tipo: 'string', grupo: 'mapa', descripcion: 'Mapa activo: peru (24 Regiones del Perú), mundo (24 Regiones Mundiales) o peru_mundo ( Teatro Global + Perú)' },
+  { clave: 'modoInicioTablero', valor: 'tarjetas_estrellas', tipo: 'string', grupo: 'mapa', descripcion: 'Modo de inicio para el tablero físico: tarjetas_estrellas (Por suerte ★1 / ★★2), eleccion_mapa (Elegir lugar) o libre' },
   { clave: 'modoBancoPreguntas', valor: 'mixto', tipo: 'string', grupo: 'preguntas', descripcion: 'Banco de preguntas activo: peru, mundo o mixto' },
-  { clave: 'modoSeleccionCategorias', valor: 'tv_show', tipo: 'string', grupo: 'preguntas', descripcion: 'Modo de selección de categoría: tv_show (Ruleta/Cartas de TV), seleccionable o aleatorio' },
-  { clave: 'dificultadProgresiva', valor: 'true', tipo: 'boolean', grupo: 'preguntas', descripcion: 'Equilibra preguntas básicas, intermedias y avanzadas según la ronda y el valor del territorio' },
-  { clave: 'condicionVictoria', valor: 'dominacion_o_puntos', tipo: 'string', grupo: 'reglas', descripcion: 'Condición de victoria: conquista del 75% del mapa o mayor puntaje al finalizar las rondas' },
-  { clave: 'rondasMaximasPartida', valor: '12', tipo: 'number', grupo: 'reglas', descripcion: 'Duración máxima de la partida en rondas completas' },
-  { clave: 'sonidosHabilitados', valor: 'true', tipo: 'boolean', grupo: 'interfaz', descripcion: 'Activa los efectos de sonido sintetizados por defecto' },
-  { clave: 'animacionesHabilitadas', valor: 'true', tipo: 'boolean', grupo: 'interfaz', descripcion: 'Activa las animaciones de combate, tropas y conquista en el mapa' }
+  { clave: 'modoSeleccionCategorias', valor: 'tv_show', tipo: 'string', grupo: 'preguntas', descripcion: 'Modo de selección de categoría: tv_show, seleccionable o aleatorio' },
+  { clave: 'dificultadProgresiva', valor: 'false', tipo: 'boolean', grupo: 'preguntas', descripcion: 'Mezcla equilibrada de preguntas básicas, intermedias y avanzadas' },
+  { clave: 'sonidosHabilitados', valor: 'true', tipo: 'boolean', grupo: 'interfaz', descripcion: 'Activa los efectos de sonido por defecto' },
+  { clave: 'animacionesHabilitadas', valor: 'true', tipo: 'boolean', grupo: 'interfaz', descripcion: 'Activa las animaciones visuales' }
 ];
 
 // =========================================================================
-// TERRITORIOS DEL MAPA:
-// 1. MAPA PERÚ (12 Macro-Regiones / 24 Departamentos Estratégicos en vista SVG 1000x620)
-// 2. MAPA MUNDO (12 Regiones Continentales en vista SVG 1000x620)
-// En modo 'peru_mundo' o individual ambos están disponibles con sus conexiones reales
+// LOS 42 TERRITORIOS OFICIALES DEL TABLERO CLÁSICO DE RISK
+// Incluye coordenadas exactas sobre img/risk-map.png (1000 x 640)
+// y el valor real de su tarjeta en estrellas: ★ (1 soldado) o ★★ (2 soldados)
 // =========================================================================
 const TERRITORIOS_CATALOGO = [
-  // --- TEATRO PERÚ (12 Regiones Estratégicas que agrupan los 24 departamentos) ---
-  {
-    codigo: 'PE_NORTE_COSTA',
-    mapa: 'peru',
-    nombre: 'Tumbes y Piura',
-    region_continente: 'Costa Norte',
-    centro_x: 135,
-    centro_y: 120,
-    svg_path: 'M 95,75 L 175,70 L 185,155 L 105,165 L 80,115 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 150,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_LAMBAYEQUE_LIBERTAD',
-    mapa: 'peru',
-    nombre: 'Lambayeque y La Libertad',
-    region_continente: 'Costa Norte',
-    centro_x: 150,
-    centro_y: 215,
-    svg_path: 'M 105,165 L 185,155 L 205,255 L 125,265 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 150,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_CAJAMARCA_AMAZONAS',
-    mapa: 'peru',
-    nombre: 'Cajamarca y Amazonas',
-    region_continente: 'Sierra y Ceja Norte',
-    centro_x: 245,
-    centro_y: 150,
-    svg_path: 'M 175,70 L 290,75 L 295,215 L 205,255 L 185,155 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 150,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_LORETO',
-    mapa: 'peru',
-    nombre: 'Loreto (Amazonía Norte)',
-    region_continente: 'Selva Amazónica',
-    centro_x: 385,
-    centro_y: 140,
-    svg_path: 'M 290,75 L 475,55 L 485,220 L 365,245 L 295,215 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 180,
-    bono_region: 3
-  },
-  {
-    codigo: 'PE_SAN_MARTIN_HUANUCO',
-    mapa: 'peru',
-    nombre: 'San Martín y Huánuco',
-    region_continente: 'Selva Central',
-    centro_x: 300,
-    centro_y: 275,
-    svg_path: 'M 205,255 L 295,215 L 365,245 L 350,335 L 245,335 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 150,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_ANCASH_LIMA',
-    mapa: 'peru',
-    nombre: 'Áncash, Lima y Callao',
-    region_continente: 'Costa Central',
-    centro_x: 185,
-    centro_y: 335,
-    svg_path: 'M 125,265 L 205,255 L 245,335 L 235,415 L 145,405 Z',
-    tropas_iniciales: 4,
-    puntos_valor: 200,
-    bono_region: 3
-  },
-  {
-    codigo: 'PE_JUNIN_PASCO',
-    mapa: 'peru',
-    nombre: 'Pasco, Junín y Huancavelica',
-    region_continente: 'Sierra Central',
-    centro_x: 285,
-    centro_y: 385,
-    svg_path: 'M 245,335 L 350,335 L 345,435 L 235,415 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_UCAYALI_MADRE',
-    mapa: 'peru',
-    nombre: 'Ucayali y Madre de Dios',
-    region_continente: 'Selva Amazónica',
-    centro_x: 425,
-    centro_y: 335,
-    svg_path: 'M 365,245 L 485,220 L 490,435 L 395,435 L 350,335 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 3
-  },
-  {
-    codigo: 'PE_ICA_AYACUCHO',
-    mapa: 'peru',
-    nombre: 'Ica, Ayacucho y Apurímac',
-    region_continente: 'Sur Andino-Costero',
-    centro_x: 245,
-    centro_y: 470,
-    svg_path: 'M 145,405 L 235,415 L 345,435 L 315,520 L 185,510 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_CUSCO',
-    mapa: 'peru',
-    nombre: 'Cusco (Capital Imperial)',
-    region_continente: 'Sur Andino',
-    centro_x: 380,
-    centro_y: 470,
-    svg_path: 'M 345,435 L 395,435 L 465,435 L 430,525 L 315,520 Z',
-    tropas_iniciales: 4,
-    puntos_valor: 220,
-    bono_region: 3
-  },
-  {
-    codigo: 'PE_AREQUIPA_MOQUEGUA_TACNA',
-    mapa: 'peru',
-    nombre: 'Arequipa, Moquegua y Tacna',
-    region_continente: 'Sur Costero',
-    centro_x: 280,
-    centro_y: 555,
-    svg_path: 'M 185,510 L 315,520 L 365,585 L 215,590 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 2
-  },
-  {
-    codigo: 'PE_PUNO_TITICACA',
-    mapa: 'peru',
-    nombre: 'Puno y Altiplano Titicaca',
-    region_continente: 'Sur Andino',
-    centro_x: 425,
-    centro_y: 555,
-    svg_path: 'M 315,520 L 430,525 L 485,540 L 455,595 L 365,585 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 2
-  },
+  // --- AMÉRICA DEL NORTE (9 Territorios | Bono Continente: +5 soldados) ---
+  { codigo: 'ALASKA', mapa: 'risk', nombre: 'Alaska', region_continente: 'América del Norte', centro_x: 58, centro_y: 120, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'NORTH_WEST_TERRITORY', mapa: 'risk', nombre: 'North West Territory (Noroeste)', region_continente: 'América del Norte', centro_x: 155, centro_y: 118, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'GREENLAND', mapa: 'risk', nombre: 'Greenland (Groenlandia)', region_continente: 'América del Norte', centro_x: 330, centro_y: 68, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'ALBERTA', mapa: 'risk', nombre: 'Alberta', region_continente: 'América del Norte', centro_x: 142, centro_y: 185, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'ONTARIO', mapa: 'risk', nombre: 'Ontario', region_continente: 'América del Norte', centro_x: 205, centro_y: 200, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'QUEBEC', mapa: 'risk', nombre: 'Quebec', region_continente: 'América del Norte', centro_x: 270, centro_y: 200, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'WESTERN_UNITED_STATES', mapa: 'risk', nombre: 'Western United States (EE. UU. Oeste)', region_continente: 'América del Norte', centro_x: 150, centro_y: 265, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'EASTERN_UNITED_STATES', mapa: 'risk', nombre: 'Eastern United States (EE. UU. Este)', region_continente: 'América del Norte', centro_x: 222, centro_y: 295, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'CENTRAL_AMERICA', mapa: 'risk', nombre: 'Central America (América Central)', region_continente: 'América del Norte', centro_x: 162, centro_y: 375, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
 
-  // --- TEATRO MUNDIAL (12 Regiones Globales Estilo Risk / Triviador Mundo) ---
-  {
-    codigo: 'MU_NORTEAMERICA',
-    mapa: 'mundo',
-    nombre: 'América del Norte',
-    region_continente: 'América',
-    centro_x: 590,
-    centro_y: 135,
-    svg_path: 'M 525,70 L 660,65 L 650,195 L 540,195 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 180,
-    bono_region: 3
-  },
-  {
-    codigo: 'MU_CENTROAMERICA_CARIBE',
-    mapa: 'mundo',
-    nombre: 'México y el Caribe',
-    region_continente: 'América',
-    centro_x: 585,
-    centro_y: 255,
-    svg_path: 'M 540,195 L 650,195 L 635,305 L 545,295 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 150,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_SUDAMERICA_ATLANTICA',
-    mapa: 'mundo',
-    nombre: 'Sudamérica Oriental (Brasil/Cono Sur)',
-    region_continente: 'América',
-    centro_x: 610,
-    centro_y: 410,
-    svg_path: 'M 545,295 L 655,315 L 665,515 L 560,495 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_EUROPA_OCCIDENTAL',
-    mapa: 'mundo',
-    nombre: 'Europa Occidental',
-    region_continente: 'Europa',
-    centro_x: 725,
-    centro_y: 145,
-    svg_path: 'M 660,75 L 785,75 L 780,210 L 655,200 Z',
-    tropas_iniciales: 4,
-    puntos_valor: 190,
-    bono_region: 3
-  },
-  {
-    codigo: 'MU_EUROPA_ORIENTAL',
-    mapa: 'mundo',
-    nombre: 'Europa Oriental y Escandinavia',
-    region_continente: 'Europa',
-    centro_x: 835,
-    centro_y: 135,
-    svg_path: 'M 785,65 L 890,65 L 885,205 L 780,210 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 180,
-    bono_region: 3
-  },
-  {
-    codigo: 'MU_AFRICA_NORTE',
-    mapa: 'mundo',
-    nombre: 'África del Norte y Egipto',
-    region_continente: 'África',
-    centro_x: 735,
-    centro_y: 285,
-    svg_path: 'M 655,200 L 795,215 L 790,355 L 670,345 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_AFRICA_AUSTRAL',
-    mapa: 'mundo',
-    nombre: 'África Subsahariana y Austral',
-    region_continente: 'África',
-    centro_x: 740,
-    centro_y: 440,
-    svg_path: 'M 670,345 L 790,355 L 795,525 L 685,515 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_MEDIO_ORIENTE',
-    mapa: 'mundo',
-    nombre: 'Medio Oriente y Mesopotamia',
-    region_continente: 'Asia',
-    centro_x: 845,
-    centro_y: 275,
-    svg_path: 'M 795,215 L 895,205 L 890,340 L 790,355 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_ASIA_NORTE_SIBERIA',
-    mapa: 'mundo',
-    nombre: 'Eurasia y Siberia',
-    region_continente: 'Asia',
-    centro_x: 935,
-    centro_y: 125,
-    svg_path: 'M 890,60 L 985,65 L 980,200 L 885,205 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 3
-  },
-  {
-    codigo: 'MU_ASIA_ORIENTAL',
-    mapa: 'mundo',
-    nombre: 'China, Japón y Corea',
-    region_continente: 'Asia',
-    centro_x: 940,
-    centro_y: 275,
-    svg_path: 'M 895,205 L 985,200 L 985,355 L 890,340 Z',
-    tropas_iniciales: 4,
-    puntos_valor: 200,
-    bono_region: 3
-  },
-  {
-    codigo: 'MU_INDIA_SURESTE',
-    mapa: 'mundo',
-    nombre: 'India y Sudeste Asiático',
-    region_continente: 'Asia',
-    centro_x: 855,
-    centro_y: 415,
-    svg_path: 'M 790,355 L 905,345 L 900,480 L 795,470 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 170,
-    bono_region: 2
-  },
-  {
-    codigo: 'MU_OCEANIA',
-    mapa: 'mundo',
-    nombre: 'Oceanía y Australia',
-    region_continente: 'Oceanía',
-    centro_x: 940,
-    centro_y: 485,
-    svg_path: 'M 905,365 L 985,365 L 985,575 L 885,575 L 900,480 Z',
-    tropas_iniciales: 3,
-    puntos_valor: 160,
-    bono_region: 2
-  }
+  // --- AMÉRICA DEL SUR (4 Territorios | Bono Continente: +2 soldados) ---
+  { codigo: 'VENEZUELA', mapa: 'risk', nombre: 'Venezuela', region_continente: 'América del Sur', centro_x: 225, centro_y: 452, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 2 },
+  { codigo: 'PERU', mapa: 'risk', nombre: 'Perú', region_continente: 'América del Sur', centro_x: 235, centro_y: 550, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 2 },
+  { codigo: 'BRAZIL', mapa: 'risk', nombre: 'Brazil (Brasil)', region_continente: 'América del Sur', centro_x: 305, centro_y: 515, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 2 },
+  { codigo: 'ARGENTINA', mapa: 'risk', nombre: 'Argentina', region_continente: 'América del Sur', centro_x: 252, centro_y: 605, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 2 },
+
+  // --- EUROPA (7 Territorios | Bono Continente: +5 soldados) ---
+  { codigo: 'ICELAND', mapa: 'risk', nombre: 'Iceland (Islandia)', region_continente: 'Europa', centro_x: 418, centro_y: 142, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'SCANDINAVIA', mapa: 'risk', nombre: 'Scandinavia (Escandinavia)', region_continente: 'Europa', centro_x: 492, centro_y: 138, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'UKRAINE', mapa: 'risk', nombre: 'Ukraine (Ucrania / Europa Oriental)', region_continente: 'Europa', centro_x: 580, centro_y: 195, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'GREAT_BRITAIN', mapa: 'risk', nombre: 'Great Britain (Gran Bretaña)', region_continente: 'Europa', centro_x: 398, centro_y: 245, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'NORTHERN_EUROPE', mapa: 'risk', nombre: 'Northern Europe (Europa del Norte)', region_continente: 'Europa', centro_x: 488, centro_y: 255, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+  { codigo: 'WESTERN_EUROPE', mapa: 'risk', nombre: 'Western Europe (Europa Occidental)', region_continente: 'Europa', centro_x: 422, centro_y: 345, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 5 },
+  { codigo: 'SOUTHERN_EUROPE', mapa: 'risk', nombre: 'Southern Europe (Europa del Sur)', region_continente: 'Europa', centro_x: 498, centro_y: 325, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 5 },
+
+  // --- ÁFRICA (6 Territorios | Bono Continente: +3 soldados) ---
+  { codigo: 'NORTH_AFRICA', mapa: 'risk', nombre: 'North Africa (África del Norte)', region_continente: 'África', centro_x: 458, centro_y: 495, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 3 },
+  { codigo: 'EGYPT', mapa: 'risk', nombre: 'Egypt (Egipto)', region_continente: 'África', centro_x: 530, centro_y: 455, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 3 },
+  { codigo: 'EAST_AFRICA', mapa: 'risk', nombre: 'East Africa (África Oriental)', region_continente: 'África', centro_x: 575, centro_y: 540, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 3 },
+  { codigo: 'CONGO', mapa: 'risk', nombre: 'Congo', region_continente: 'África', centro_x: 528, centro_y: 575, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 3 },
+  { codigo: 'SOUTH_AFRICA', mapa: 'risk', nombre: 'South Africa (Sudáfrica)', region_continente: 'África', centro_x: 538, centro_y: 620, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 3 },
+  { codigo: 'MADAGASCAR', mapa: 'risk', nombre: 'Madagascar', region_continente: 'África', centro_x: 632, centro_y: 605, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 3 },
+
+  // --- ASIA (12 Territorios | Bono Continente: +7 soldados) ---
+  { codigo: 'URAL', mapa: 'risk', nombre: 'Ural', region_continente: 'Asia', centro_x: 688, centro_y: 175, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 7 },
+  { codigo: 'SIBERIA', mapa: 'risk', nombre: 'Siberia', region_continente: 'Asia', centro_x: 745, centro_y: 125, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'YAKUTSK', mapa: 'risk', nombre: 'Yakutsk', region_continente: 'Asia', centro_x: 815, centro_y: 88, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'KAMCHATKA', mapa: 'risk', nombre: 'Kamchatka', region_continente: 'Asia', centro_x: 895, centro_y: 92, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 7 },
+  { codigo: 'IRKUTSK', mapa: 'risk', nombre: 'Irkutsk', region_continente: 'Asia', centro_x: 805, centro_y: 185, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'AFGHANISTAN', mapa: 'risk', nombre: 'Afghanistan (Afganistán)', region_continente: 'Asia', centro_x: 668, centro_y: 278, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'MONGOLIA', mapa: 'risk', nombre: 'Mongolia', region_continente: 'Asia', centro_x: 815, centro_y: 268, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'JAPAN', mapa: 'risk', nombre: 'Japan (Japón)', region_continente: 'Asia', centro_x: 918, centro_y: 268, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 7 },
+  { codigo: 'CHINA', mapa: 'risk', nombre: 'China', region_continente: 'Asia', centro_x: 785, centro_y: 348, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 7 },
+  { codigo: 'MIDDLE_EAST', mapa: 'risk', nombre: 'Middle East (Medio Oriente)', region_continente: 'Asia', centro_x: 605, centro_y: 392, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 7 },
+  { codigo: 'INDIA', mapa: 'risk', nombre: 'India', region_continente: 'Asia', centro_x: 722, centro_y: 418, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+  { codigo: 'SIAM', mapa: 'risk', nombre: 'Siam (Sudeste Asiático)', region_continente: 'Asia', centro_x: 808, centro_y: 438, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 7 },
+
+  // --- OCEANÍA / AUSTRALIA (4 Territorios | Bono Continente: +2 soldados) ---
+  { codigo: 'INDONESIA', mapa: 'risk', nombre: 'Indonesia', region_continente: 'Oceanía', centro_x: 818, centro_y: 545, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 2 },
+  { codigo: 'NEW_GUINEA', mapa: 'risk', nombre: 'New Guinea (Nueva Guinea)', region_continente: 'Oceanía', centro_x: 915, centro_y: 510, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 2 },
+  { codigo: 'WESTERN_AUSTRALIA', mapa: 'risk', nombre: 'Western Australia (Australia Occidental)', region_continente: 'Oceanía', centro_x: 865, centro_y: 612, svg_path: '', tropas_iniciales: 1, puntos_valor: 100, bono_region: 2 },
+  { codigo: 'EASTERN_AUSTRALIA', mapa: 'risk', nombre: 'Eastern Australia (Australia Oriental)', region_continente: 'Oceanía', centro_x: 945, centro_y: 602, svg_path: '', tropas_iniciales: 2, puntos_valor: 200, bono_region: 2 }
 ];
 
-// CONEXIONES ENTRE TERRITORIOS (BIDIRECCIONALES)
+// CONEXIONES OFICIALES DEL TABLERO CLÁSICO DE RISK (42 TERRITORIOS)
 const CONEXIONES_PARES = [
-  // Conexiones Internas Perú
-  ['PE_NORTE_COSTA', 'PE_LAMBAYEQUE_LIBERTAD'],
-  ['PE_NORTE_COSTA', 'PE_CAJAMARCA_AMAZONAS'],
-  ['PE_LAMBAYEQUE_LIBERTAD', 'PE_CAJAMARCA_AMAZONAS'],
-  ['PE_LAMBAYEQUE_LIBERTAD', 'PE_SAN_MARTIN_HUANUCO'],
-  ['PE_LAMBAYEQUE_LIBERTAD', 'PE_ANCASH_LIMA'],
-  ['PE_CAJAMARCA_AMAZONAS', 'PE_LORETO'],
-  ['PE_CAJAMARCA_AMAZONAS', 'PE_SAN_MARTIN_HUANUCO'],
-  ['PE_LORETO', 'PE_SAN_MARTIN_HUANUCO'],
-  ['PE_LORETO', 'PE_UCAYALI_MADRE'],
-  ['PE_SAN_MARTIN_HUANUCO', 'PE_ANCASH_LIMA'],
-  ['PE_SAN_MARTIN_HUANUCO', 'PE_JUNIN_PASCO'],
-  ['PE_SAN_MARTIN_HUANUCO', 'PE_UCAYALI_MADRE'],
-  ['PE_ANCASH_LIMA', 'PE_JUNIN_PASCO'],
-  ['PE_ANCASH_LIMA', 'PE_ICA_AYACUCHO'],
-  ['PE_JUNIN_PASCO', 'PE_UCAYALI_MADRE'],
-  ['PE_JUNIN_PASCO', 'PE_ICA_AYACUCHO'],
-  ['PE_JUNIN_PASCO', 'PE_CUSCO'],
-  ['PE_UCAYALI_MADRE', 'PE_CUSCO'],
-  ['PE_UCAYALI_MADRE', 'PE_PUNO_TITICACA'],
-  ['PE_ICA_AYACUCHO', 'PE_CUSCO'],
-  ['PE_ICA_AYACUCHO', 'PE_AREQUIPA_MOQUEGUA_TACNA'],
-  ['PE_CUSCO', 'PE_AREQUIPA_MOQUEGUA_TACNA'],
-  ['PE_CUSCO', 'PE_PUNO_TITICACA'],
-  ['PE_AREQUIPA_MOQUEGUA_TACNA', 'PE_PUNO_TITICACA'],
+  // América del Norte
+  ['ALASKA', 'NORTH_WEST_TERRITORY'], ['ALASKA', 'ALBERTA'], ['ALASKA', 'KAMCHATKA'],
+  ['NORTH_WEST_TERRITORY', 'ALBERTA'], ['NORTH_WEST_TERRITORY', 'ONTARIO'], ['NORTH_WEST_TERRITORY', 'GREENLAND'],
+  ['GREENLAND', 'ONTARIO'], ['GREENLAND', 'QUEBEC'], ['GREENLAND', 'ICELAND'],
+  ['ALBERTA', 'ONTARIO'], ['ALBERTA', 'WESTERN_UNITED_STATES'],
+  ['ONTARIO', 'QUEBEC'], ['ONTARIO', 'WESTERN_UNITED_STATES'], ['ONTARIO', 'EASTERN_UNITED_STATES'],
+  ['QUEBEC', 'EASTERN_UNITED_STATES'],
+  ['WESTERN_UNITED_STATES', 'EASTERN_UNITED_STATES'], ['WESTERN_UNITED_STATES', 'CENTRAL_AMERICA'],
+  ['EASTERN_UNITED_STATES', 'CENTRAL_AMERICA'],
+  ['CENTRAL_AMERICA', 'VENEZUELA'],
 
-  // Conexiones Internas Mundo
-  ['MU_NORTEAMERICA', 'MU_CENTROAMERICA_CARIBE'],
-  ['MU_NORTEAMERICA', 'MU_EUROPA_OCCIDENTAL'],
-  ['MU_NORTEAMERICA', 'MU_ASIA_NORTE_SIBERIA'],
-  ['MU_CENTROAMERICA_CARIBE', 'MU_SUDAMERICA_ATLANTICA'],
-  ['MU_SUDAMERICA_ATLANTICA', 'MU_AFRICA_NORTE'],
-  ['MU_SUDAMERICA_ATLANTICA', 'MU_AFRICA_AUSTRAL'],
-  ['MU_EUROPA_OCCIDENTAL', 'MU_EUROPA_ORIENTAL'],
-  ['MU_EUROPA_OCCIDENTAL', 'MU_AFRICA_NORTE'],
-  ['MU_EUROPA_ORIENTAL', 'MU_ASIA_NORTE_SIBERIA'],
-  ['MU_EUROPA_ORIENTAL', 'MU_MEDIO_ORIENTE'],
-  ['MU_EUROPA_ORIENTAL', 'MU_AFRICA_NORTE'],
-  ['MU_AFRICA_NORTE', 'MU_AFRICA_AUSTRAL'],
-  ['MU_AFRICA_NORTE', 'MU_MEDIO_ORIENTE'],
-  ['MU_AFRICA_AUSTRAL', 'MU_MEDIO_ORIENTE'],
-  ['MU_AFRICA_AUSTRAL', 'MU_INDIA_SURESTE'],
-  ['MU_MEDIO_ORIENTE', 'MU_ASIA_ORIENTAL'],
-  ['MU_MEDIO_ORIENTE', 'MU_INDIA_SURESTE'],
-  ['MU_ASIA_NORTE_SIBERIA', 'MU_ASIA_ORIENTAL'],
-  ['MU_ASIA_ORIENTAL', 'MU_INDIA_SURESTE'],
-  ['MU_ASIA_ORIENTAL', 'MU_OCEANIA'],
-  ['MU_INDIA_SURESTE', 'MU_OCEANIA'],
+  // América del Sur
+  ['VENEZUELA', 'PERU'], ['VENEZUELA', 'BRAZIL'],
+  ['PERU', 'BRAZIL'], ['PERU', 'ARGENTINA'],
+  ['BRAZIL', 'ARGENTINA'], ['BRAZIL', 'NORTH_AFRICA'],
 
-  // Puentes Marítimos / Aéreos entre Perú y el Mundo (para el modo Teatro Global 'peru_mundo')
-  ['PE_NORTE_COSTA', 'MU_CENTROAMERICA_CARIBE'],
-  ['PE_LORETO', 'MU_NORTEAMERICA'],
-  ['PE_UCAYALI_MADRE', 'MU_SUDAMERICA_ATLANTICA'],
-  ['PE_PUNO_TITICACA', 'MU_SUDAMERICA_ATLANTICA'],
-  ['PE_ANCASH_LIMA', 'MU_OCEANIA']
+  // Europa
+  ['ICELAND', 'SCANDINAVIA'], ['ICELAND', 'GREAT_BRITAIN'],
+  ['SCANDINAVIA', 'UKRAINE'], ['SCANDINAVIA', 'NORTHERN_EUROPE'], ['SCANDINAVIA', 'GREAT_BRITAIN'],
+  ['GREAT_BRITAIN', 'NORTHERN_EUROPE'], ['GREAT_BRITAIN', 'WESTERN_EUROPE'],
+  ['WESTERN_EUROPE', 'NORTHERN_EUROPE'], ['WESTERN_EUROPE', 'SOUTHERN_EUROPE'], ['WESTERN_EUROPE', 'NORTH_AFRICA'],
+  ['NORTHERN_EUROPE', 'UKRAINE'], ['NORTHERN_EUROPE', 'SOUTHERN_EUROPE'],
+  ['SOUTHERN_EUROPE', 'UKRAINE'], ['SOUTHERN_EUROPE', 'MIDDLE_EAST'], ['SOUTHERN_EUROPE', 'EGYPT'], ['SOUTHERN_EUROPE', 'NORTH_AFRICA'],
+  ['UKRAINE', 'URAL'], ['UKRAINE', 'AFGHANISTAN'], ['UKRAINE', 'MIDDLE_EAST'],
+
+  // África
+  ['NORTH_AFRICA', 'EGYPT'], ['NORTH_AFRICA', 'EAST_AFRICA'], ['NORTH_AFRICA', 'CONGO'],
+  ['EGYPT', 'EAST_AFRICA'], ['EGYPT', 'MIDDLE_EAST'],
+  ['EAST_AFRICA', 'MIDDLE_EAST'], ['EAST_AFRICA', 'CONGO'], ['EAST_AFRICA', 'SOUTH_AFRICA'], ['EAST_AFRICA', 'MADAGASCAR'],
+  ['CONGO', 'SOUTH_AFRICA'],
+  ['SOUTH_AFRICA', 'MADAGASCAR'],
+
+  // Asia
+  ['URAL', 'SIBERIA'], ['URAL', 'AFGHANISTAN'], ['URAL', 'CHINA'],
+  ['SIBERIA', 'YAKUTSK'], ['SIBERIA', 'IRKUTSK'], ['SIBERIA', 'MONGOLIA'], ['SIBERIA', 'CHINA'],
+  ['YAKUTSK', 'KAMCHATKA'], ['YAKUTSK', 'IRKUTSK'],
+  ['KAMCHATKA', 'IRKUTSK'], ['KAMCHATKA', 'MONGOLIA'], ['KAMCHATKA', 'JAPAN'],
+  ['IRKUTSK', 'MONGOLIA'],
+  ['MONGOLIA', 'JAPAN'], ['MONGOLIA', 'CHINA'],
+  ['AFGHANISTAN', 'CHINA'], ['AFGHANISTAN', 'INDIA'], ['AFGHANISTAN', 'MIDDLE_EAST'],
+  ['MIDDLE_EAST', 'INDIA'],
+  ['CHINA', 'INDIA'], ['CHINA', 'SIAM'],
+  ['INDIA', 'SIAM'],
+  ['SIAM', 'INDONESIA'],
+
+  // Oceanía
+  ['INDONESIA', 'NEW_GUINEA'], ['INDONESIA', 'WESTERN_AUSTRALIA'],
+  ['NEW_GUINEA', 'WESTERN_AUSTRALIA'], ['NEW_GUINEA', 'EASTERN_AUSTRALIA'],
+  ['WESTERN_AUSTRALIA', 'EASTERN_AUSTRALIA']
 ];
+
+// Tabla oficial de canje de Estrellas de Tarjetas Risk por Soldados Extra
+const TABLA_CANJE_ESTRELLAS_RISK = {
+  2: 2,
+  3: 4,
+  4: 7,
+  5: 10,
+  6: 13,
+  7: 17,
+  8: 21,
+  9: 25,
+  10: 30
+};
 
 module.exports = {
   DIFICULTADES,
@@ -756,5 +521,6 @@ module.exports = {
   COMODINES_CATALOGO,
   CONFIGURACIONES_INICIALES,
   TERRITORIOS_CATALOGO,
-  CONEXIONES_PARES
+  CONEXIONES_PARES,
+  TABLA_CANJE_ESTRELLAS_RISK
 };
